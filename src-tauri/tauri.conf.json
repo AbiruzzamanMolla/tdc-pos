@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-apptdc-pos",
+        "title": "TDC-POS",
         "width": 800,
         "height": 600
       }

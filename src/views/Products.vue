@@ -268,7 +268,7 @@ onMounted(() => {
               <input v-model.number="form.stock_quantity" type="number"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none"
                 :disabled="isEditing">
-              <span v-if="isEditing" class="text-xs text-gray-500">Stock managed via Purchase/Sales</span>
+              <span v-if="isEditing" class="text-xs text-gray-500">Stock managed via Stock Entries & Sales</span>
             </div>
 
             <div>

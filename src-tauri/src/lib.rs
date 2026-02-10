@@ -45,6 +45,8 @@ pub fn run() {
             commands::get_purchases,
             commands::get_purchase_items,
             commands::get_order_items,
+            commands::delete_purchase,
+            commands::delete_order,
             commands::get_orders,
             commands::get_dashboard_stats,
             commands::get_sales_report,

@@ -146,8 +146,21 @@ async function savePurchase() {
     closeModal();
     loadPurchases();
   } catch (error) {
-    console.error("Failed to save purchase:", error);
-    alert("Error saving purchase: " + error);
+    console.error("Failed to save stock entry:", error);
+    alert("Error saving stock entry: " + error);
+  }
+}
+
+async function deletePurchase(purchase) {
+  if (!confirm(`Are you sure you want to delete this stock entry? It will reverse stock quantities.`)) return;
+  try {
+    await invoke('delete_purchase', { purchaseId: purchase.purchase_id });
+    loadPurchases();
+    // Refresh products if needed to show updated stock counts?
+    // Current view doesn't show product stock, but if we do...
+  } catch (error) {
+    console.error("Failed to delete stock entry:", error);
+    alert("Failed to delete: " + error);
   }
 }
 
@@ -159,10 +172,10 @@ onMounted(() => {
 <template>
   <div class="h-full flex flex-col space-y-6">
     <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold text-gray-800">Purchases</h1>
+      <h1 class="text-3xl font-bold text-gray-800">Stocks</h1>
       <button @click="openModal"
         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition">
-        + New Purchase
+        + New Stock Entry
       </button>
     </div>
 
@@ -176,6 +189,7 @@ onMounted(() => {
             <th class="p-4 border-b">Invoice #</th>
             <th class="p-4 border-b text-right">Total Amount</th>
             <th class="p-4 border-b">Notes</th>
+            <th class="p-4 border-b text-center">Actions</th>
           </tr>
         </thead>
         <tbody class="text-gray-700">
@@ -186,13 +200,15 @@ onMounted(() => {
             <td class="p-4 text-gray-500 text-sm">{{ purchase.invoice_number || '-' }}</td>
             <td class="p-4 text-right font-bold">{{ currencySymbol }}{{ purchase.total_amount.toFixed(2) }}</td>
             <td class="p-4 text-gray-500 text-sm truncate max-w-xs">{{ purchase.notes }}</td>
-            <td class="p-4 text-center">
+            <td class="p-4 text-center flex justify-center gap-2">
               <button @click="viewPurchaseDetails(purchase)"
-                class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">View</button>
+              <button @click="deletePurchase(purchase)"
+                class="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50">Delete</button>
             </td>
           </tr>
           <tr v-if="purchases.length === 0">
-            <td colspan="5" class="p-8 text-center text-gray-500">No purchase history found.</td>
+            <td colspan="6" class="p-8 text-center text-gray-500">No stock entries found.</td>
           </tr>
         </tbody>
       </table>
@@ -202,7 +218,7 @@ onMounted(() => {
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative flex flex-col h-[90vh]">
         <button @click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl">✕</button>
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">New Purchase (Inward Stock)</h2>
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">New Stock Entry</h2>
 
         <div class="grid grid-cols-3 gap-4 mb-6">
           <div>
@@ -291,7 +307,7 @@ onMounted(() => {
                 class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
               <button @click="savePurchase"
                 class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Save
-                Purchase</button>
+                Entry</button>
             </div>
           </div>
         </div>
@@ -304,7 +320,7 @@ onMounted(() => {
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] flex flex-col">
       <button @click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl">✕</button>
-      <h2 class="text-2xl font-bold mb-1 text-gray-800">Purchase Details</h2>
+      <h2 class="text-2xl font-bold mb-1 text-gray-800">Stock Entry Details</h2>
       <div class="text-sm text-gray-500 mb-6">Invoice: {{ selectedPurchase.invoice_number || 'N/A' }} | Date: {{
         selectedPurchase.purchase_date }}</div>
 
@@ -348,7 +364,7 @@ onMounted(() => {
         <div class="text-right">
           <div class="text-xs text-gray-500 uppercase">Total Amount</div>
           <div class="text-2xl font-bold text-gray-800">{{ currencySymbol }}{{ selectedPurchase.total_amount.toFixed(2)
-            }}</div>
+          }}</div>
         </div>
       </div>
     </div>

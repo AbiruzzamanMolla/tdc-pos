@@ -88,6 +88,17 @@ async function viewOrderDetails(order) {
   }
 }
 
+async function deleteOrder(order) {
+  if (!confirm(`Are you sure you want to delete Order #${order.order_id}? This will restore stock quantities.`)) return;
+  try {
+    await invoke('delete_order', { orderId: order.order_id });
+    loadOrders();
+  } catch (e) {
+    console.error("Failed to delete order", e);
+    alert("Failed to delete order: " + e);
+  }
+}
+
 function addToCart(product) {
   if (product.stock_quantity <= 0) {
     alert("Out of stock!");
@@ -230,7 +241,7 @@ onMounted(() => {
             <h3 class="font-bold text-gray-800 text-sm truncate">{{ product.product_name }}</h3>
             <div class="flex justify-between items-center mt-2">
               <span class="text-blue-600 font-bold">{{ currencySymbol }}{{ product.default_selling_price.toFixed(2)
-                }}</span>
+              }}</span>
               <span class="text-xs px-2 py-1 rounded-full"
                 :class="product.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
                 {{ product.stock_quantity }} left
@@ -308,9 +319,11 @@ onMounted(() => {
                 {{ order.payment_method }}
               </span>
             </td>
-            <td class="p-4 text-center">
+            <td class="p-4 text-center flex justify-center gap-2">
               <button @click="viewOrderDetails(order)"
-                class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">View</button>
+              <button @click="deleteOrder(order)"
+                class="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50">Delete</button>
             </td>
           </tr>
         </tbody>

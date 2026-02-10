@@ -92,7 +92,7 @@ onMounted(() => {
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
         <div class="text-2xl font-bold text-gray-700">{{ currencySymbol }}{{ stats.total_purchases.toFixed(2) }}</div>
-        <div class="text-gray-400 text-sm">Total Purchases (Cost)</div>
+        <div class="text-gray-400 text-sm">Total Stock Cost</div>
       </div>
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
@@ -111,9 +111,9 @@ onMounted(() => {
         class="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Manage Products
       </router-link>
-      <router-link to="/purchases"
+      <router-link to="/stocks"
         class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
-        New Purchase
+        New Stock Entry
       </router-link>
     </div>
   </div>

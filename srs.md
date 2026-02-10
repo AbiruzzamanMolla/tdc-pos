@@ -322,8 +322,9 @@ Use:
 - Modular and scalable codebase
 - Easy future extension
 
-# ===================================================== 8. FUTURE FEATURES (DO NOT IMPLEMENT NOW)
+# ===================================================== 8. FUTURE FEATURES (IMPLEMENT NOW)
 
+- add a new stock page will all the available stock products in one apge with qty and minimal details.
 - User authentication
 - Role-based access
 - Cloud sync

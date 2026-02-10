@@ -8,9 +8,19 @@ use std::collections::HashMap;
 pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
-    let mut stmt = conn.prepare("SELECT id, product_name, product_code, category, brand, buying_price, default_selling_price, stock_quantity, unit, tax_percentage, created_at, updated_at, is_deleted FROM products WHERE is_deleted = 0").map_err(|e| e.to_string())?;
+    // Fetch products with the first image if available
+    let mut stmt = conn.prepare("
+        SELECT p.id, p.product_name, p.product_code, p.category, p.brand, p.buying_price, p.default_selling_price, 
+               p.stock_quantity, p.unit, p.tax_percentage, p.created_at, p.updated_at, p.is_deleted,
+               (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as image_path
+        FROM products p
+        WHERE p.is_deleted = 0
+    ").map_err(|e| e.to_string())?;
     
     let products_iter = stmt.query_map([], |row| {
+        let image_path: Option<String> = row.get(13)?;
+        let images = image_path.map(|path| vec![path]);
+
         Ok(Product {
             id: Some(row.get(0)?),
             product_name: row.get(1)?,
@@ -25,14 +35,7 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
             created_at: row.get(10)?,
             updated_at: row.get(11)?,
             is_deleted: row.get(12)?,
-            images: None, // Will populate separately if needed, or keeping empty for list performance?
-                          // For now, let's just initialize it as None or empty Vec.
-                          // If we want to show images in list, we should fetch them.
-                          // But creating N+1 query problem. 
-                          // Better to have a separate command `get_product_images` or fetch in a joined query if needed.
-                          // Let's populate with empty for `get_products` to keep it fast, 
-                          // AND add `get_product_details` that includes images?
-                          // Or just `get_product_images`.
+            images,
         })
     }).map_err(|e| e.to_string())?;
     
@@ -68,8 +71,16 @@ fn save_images(app: &AppHandle, images: Vec<String>) -> Result<Vec<String>, Stri
         std::fs::create_dir_all(&images_dir).map_err(|e| e.to_string())?;
     }
 
+    let images_dir_str = images_dir.to_string_lossy().to_string();
+
     let mut saved_paths = Vec::new();
     for (i, path) in images.iter().enumerate() {
+        // If already in our images dir, keep as-is
+        if path.starts_with(&images_dir_str) {
+            saved_paths.push(path.clone());
+            continue;
+        }
+
         let source_path = std::path::Path::new(path);
         if source_path.exists() {
             let ext = source_path.extension().and_then(|e| e.to_str()).unwrap_or("png");
@@ -80,14 +91,8 @@ fn save_images(app: &AppHandle, images: Vec<String>) -> Result<Vec<String>, Stri
             std::fs::copy(source_path, &dest_path).map_err(|e| e.to_string())?;
             saved_paths.push(dest_path.to_string_lossy().to_string());
         } else {
-             // If file doesn't exist (maybe already in app data or invalid?), keep original or skip?
-             // Assuming new uploads are always valid paths.
-             // If it's already an absolute path in our store, we might not want to re-copy.
-             // But simpler to just copy new selections.
-             // Frontend sends all images.
-             // If image path already contains "app_data" or checks?
-             // Let's assume frontend sends paths.
-             saved_paths.push(path.clone());
+            // Path doesn't exist and not in our dir — skip silently
+            saved_paths.push(path.clone());
         }
     }
     Ok(saved_paths)
@@ -115,36 +120,7 @@ pub fn create_product(product: Product, images: Vec<String>, db: State<Database>
    
    let product_id = tx.last_insert_rowid();
 
-   // Save images to AppData
-   // Note: We need to do this outside transaction or assume success.
-   // But we need `app` handle which we added to args.
-   // We should process images BEFORE DB?
-   // Actually, we can just save them. If DB fails, we have orphan files (cleanup later?).
-   // Better: DB first, then copy. If copy fails, we have DB record but no file?
-   // Let's copy first.
-   // But we need to update signature of save_images to logic inside command or separate.
-   // I put `save_images` helper above.
-   
-   // Insert images
-   // We need to release the lock to use helper? No helper doesn't use DB.
-   // Wait, I can't call usage of `app` inside `create_product` easily if I don't use the helper correctly.
-   // I will explicitly copy here for simplicity or call helper.
-   // Helper saves to disk and returns new paths.
-   
-   // Drop the lock to perform FS? No, transaction needs connection.
-   // Just do FS.
-   
-   // We can't use `save_images` helper inside command if I didn't define it or if borrow checker complains?
-   // It should be fine.
-   
-   // Wait, `images` variable is moved? No, `Vec<String>`.
-   // I need to process images to get new paths.
-   // But I am inside `create_product`.
-   
-   // Let's use the helper.
-   // tx is strictly DB.
-   // `app` is available.
-   
+   // Copy images to AppData and insert paths
    let final_images = match save_images(&app, images) {
        Ok(paths) => paths,
        Err(e) => return Err(e),
@@ -625,6 +601,80 @@ pub fn get_purchase_items(purchase_id: i64, db: State<Database>) -> Result<Vec<c
     }
     
     Ok(items)
+}
+
+#[tauri::command]
+pub fn delete_purchase(purchase_id: i64, db: State<Database>) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    
+    // 1. Get items to revert stock
+    let items: Vec<(i64, f64)> = {
+        let mut stmt = tx.prepare("SELECT product_id, quantity FROM purchase_items WHERE purchase_id = ?1").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(params![purchase_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        }).map_err(|e| e.to_string())?;
+        
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| e.to_string())?);
+        }
+        result
+    };
+
+    // 2. Revert Stock (Subtract what was added)
+    for (product_id, quantity) in items {
+        tx.execute(
+            "UPDATE products SET stock_quantity = stock_quantity - ?1 WHERE id = ?2",
+            params![quantity, product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    // 3. Delete Items
+    tx.execute("DELETE FROM purchase_items WHERE purchase_id = ?1", params![purchase_id]).map_err(|e| e.to_string())?;
+    
+    // 4. Delete Purchase
+    tx.execute("DELETE FROM purchases WHERE purchase_id = ?1", params![purchase_id]).map_err(|e| e.to_string())?;
+    
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_order(order_id: i64, db: State<Database>) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    
+    // 1. Get items to revert stock
+    let items: Vec<(i64, f64)> = {
+        let mut stmt = tx.prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?1").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(params![order_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        }).map_err(|e| e.to_string())?;
+        
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| e.to_string())?);
+        }
+        result
+    };
+
+    // 2. Revert Stock (Add back what was sold)
+    for (product_id, quantity) in items {
+        tx.execute(
+            "UPDATE products SET stock_quantity = stock_quantity + ?1 WHERE id = ?2",
+            params![quantity, product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    // 3. Delete Items
+    tx.execute("DELETE FROM order_items WHERE order_id = ?1", params![order_id]).map_err(|e| e.to_string())?;
+    
+    // 4. Delete Order
+    tx.execute("DELETE FROM orders WHERE order_id = ?1", params![order_id]).map_err(|e| e.to_string())?;
+    
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]

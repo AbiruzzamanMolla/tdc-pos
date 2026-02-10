@@ -6,8 +6,20 @@
   "permissions": [
     "core:default",
     "opener:default",
-
     "fs:default",
-    "dialog:default"
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-copy-file",
+    "dialog:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$RESOURCE/**" },
+        { "path": "**" }
+      ]
+    }
   ]
 }

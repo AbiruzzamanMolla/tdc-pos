@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0] - 2026-02-11
+
+### Added
+
+- **Expanded RBAC**: Implemented 7 distinct roles (`super_admin`, `admin`, `manager`, `buy_manager`, `sell_manager`, `report_checker`, `inspector`).
+- **User Management Panel**: Admins and Super Admins can now create, view, and delete user accounts.
+- **Granular Permissions**:
+  - Restricts access to specific sidebar items and routes based on role capabilities.
+  - Dashboard metrics and quick actions are now permissions-aware.
+- **System Protection**: Added safeguards in database initialization and UI to prevent deletion of the primary admin account.
+
+### Changed
+
+- **Initial Setup**: The default user `admin` is now assigned the `super_admin` role.
+- **UI Structure**: Sidebar now includes a "System" segment for User Management.
+
 ## [0.4.0] - 2026-02-11
 
 ### Added

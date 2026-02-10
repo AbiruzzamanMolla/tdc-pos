@@ -55,49 +55,69 @@ onMounted(async () => {
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">/</span>
           <span class="font-medium">Dashboard</span>
         </RouterLink>
-        <RouterLink to="/products"
+
+        <!-- Inventory -->
+        <div v-if="auth.canManageProducts || auth.canViewStock"
+          class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Inventory</div>
+        <RouterLink v-if="auth.canManageProducts" to="/products"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">P</span>
           <span class="font-medium">Products</span>
         </RouterLink>
-        <RouterLink to="/stocks"
+        <RouterLink v-if="auth.canViewStock" to="/stocks"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">S</span>
           <span class="font-medium text-blue-400 group-[.active-class]:text-white">Stock List</span>
         </RouterLink>
-        <div class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Transaction</div>
-        <RouterLink to="/buying"
+
+        <!-- Transaction -->
+        <div v-if="auth.canBuy || auth.canSell"
+          class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Transaction</div>
+        <RouterLink v-if="auth.canBuy" to="/buying"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">B</span>
           <span class="font-medium">Buying</span>
         </RouterLink>
-        <RouterLink to="/selling"
+        <RouterLink v-if="auth.canSell" to="/selling"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">S</span>
           <span class="font-medium">Selling</span>
         </RouterLink>
-        <div class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Utilities</div>
-        <RouterLink to="/reports"
+
+        <!-- Utilities -->
+        <div v-if="auth.canViewReports || auth.canManageBackup || auth.canManageSettings"
+          class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Utilities</div>
+        <RouterLink v-if="auth.canViewReports" to="/reports"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">R</span>
           <span class="font-medium">Reports</span>
         </RouterLink>
-        <RouterLink v-if="auth.isAdmin" to="/backup"
+        <RouterLink v-if="auth.canManageBackup" to="/backup"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">B</span>
           <span class="font-medium">Backup</span>
         </RouterLink>
-        <RouterLink v-if="auth.isAdmin" to="/settings"
+        <RouterLink v-if="auth.canManageSettings" to="/settings"
           class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
           active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
           <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">S</span>
           <span class="font-medium">Settings</span>
+        </RouterLink>
+
+        <!-- Administration -->
+        <div v-if="auth.canManageUsers"
+          class="px-4 pt-4 pb-1 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">System</div>
+        <RouterLink v-if="auth.canManageUsers" to="/users"
+          class="flex items-center px-4 py-3 rounded-xl hover:bg-gray-800 transition-all text-sm group"
+          active-class="bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20">
+          <span class="font-bold opacity-70 group-[.active-class]:opacity-100 italic mr-2">U</span>
+          <span class="font-medium">Users</span>
         </RouterLink>
       </nav>
 
@@ -109,7 +129,7 @@ onMounted(async () => {
       </div>
 
       <div class="p-3 bg-black/20 text-[10px] text-gray-500 text-center font-black">
-        TDC-POS v0.4.0
+        TDC-POS v0.5.0
       </div>
     </aside>
 

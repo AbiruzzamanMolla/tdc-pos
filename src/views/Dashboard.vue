@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { useAuthStore } from '../stores/auth';
 
+const auth = useAuthStore();
 const stats = ref({
   total_sales: 0,
   sales_today: 0,
@@ -48,7 +50,7 @@ onMounted(() => {
     </div>
 
     <!-- Key Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div v-if="auth.canViewReports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
       <!-- Sales Today -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -78,7 +80,7 @@ onMounted(() => {
     </div>
 
     <!-- Secondary Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div v-if="auth.canViewReports" class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
         <div class="text-2xl font-bold text-gray-700">{{ stats.order_count }}</div>
@@ -102,20 +104,20 @@ onMounted(() => {
     </div>
 
     <!-- Quick Actions -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-      <router-link to="/selling"
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <router-link v-if="auth.canSell" to="/selling"
         class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Selling
       </router-link>
-      <router-link to="/products"
+      <router-link v-if="auth.canManageProducts" to="/products"
         class="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Products
       </router-link>
-      <router-link to="/stocks"
+      <router-link v-if="auth.canViewStock" to="/stocks"
         class="bg-teal-600 hover:bg-teal-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Stock List
       </router-link>
-      <router-link to="/buying"
+      <router-link v-if="auth.canBuy" to="/buying"
         class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Buying
       </router-link>

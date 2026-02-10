@@ -53,15 +53,67 @@ pub fn get_product_images(product_id: i64, db: State<Database>) -> Result<Vec<St
     
     let mut stmt = conn.prepare("SELECT image_path FROM product_images WHERE product_id = ?1").map_err(|e| e.to_string())?;
     let images_iter = stmt.query_map(params![product_id], |row| {
-        Ok(row.get(0)?)
+        Ok(row.get::<_, String>(0)?)
     }).map_err(|e| e.to_string())?;
     
     let mut images = Vec::new();
     for image in images_iter {
-        images.push(image.map_err(|e| e.to_string())?);
+        let path = image.map_err(|e| e.to_string())?;
+        images.push(path);
     }
     
     Ok(images)
+}
+
+#[tauri::command]
+pub fn read_image_base64(path: String) -> Result<String, String> {
+    let file_path = std::path::Path::new(&path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    
+    let data = std::fs::read(file_path).map_err(|e| e.to_string())?;
+    let base64_data = base64_encode(&data);
+    
+    let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_lowercase();
+    let mime = match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        _ => "image/png",
+    };
+    
+    Ok(format!("data:{};base64,{}", mime, base64_data))
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut result = String::with_capacity(data.len() * 4 / 3 + 4);
+    
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        
+        result.push(CHARS[((triple >> 18) & 0x3F) as usize] as char);
+        result.push(CHARS[((triple >> 12) & 0x3F) as usize] as char);
+        
+        if chunk.len() > 1 {
+            result.push(CHARS[((triple >> 6) & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
+        
+        if chunk.len() > 2 {
+            result.push(CHARS[(triple & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
+    }
+    
+    result
 }
 
 fn save_images(app: &AppHandle, images: Vec<String>) -> Result<Vec<String>, String> {

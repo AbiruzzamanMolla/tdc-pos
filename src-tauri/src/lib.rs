@@ -40,6 +40,7 @@ pub fn run() {
             commands::update_product,
             commands::delete_product,
             commands::get_product_images,
+            commands::read_image_base64,
             commands::create_purchase,
             commands::create_order,
             commands::get_purchases,

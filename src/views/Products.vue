@@ -2,12 +2,12 @@
 import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { convertFileSrc } from '@tauri-apps/api/core';
 
 const products = ref([]);
 const searchQuery = ref("");
 const showModal = ref(false);
 const isEditing = ref(false);
+const currencySymbol = ref('৳');
 
 const form = ref({
   id: null,
@@ -20,7 +20,8 @@ const form = ref({
   stock_quantity: 0,
   unit: "pcs",
   tax_percentage: 0,
-  images: [] // Array of file paths
+  images: [],        // raw file paths for saving
+  imagesPreviews: [] // base64 data URIs for display
 });
 
 const filteredProducts = computed(() => {
@@ -34,7 +35,24 @@ const filteredProducts = computed(() => {
 
 async function loadProducts() {
   try {
-    products.value = await invoke('get_products');
+    const [prods, settingsData] = await Promise.all([
+      invoke('get_products'),
+      invoke('get_settings')
+    ]);
+    if (settingsData && settingsData.currency_symbol) {
+      currencySymbol.value = settingsData.currency_symbol;
+    }
+    // Load first image preview for each product
+    for (const p of prods) {
+      if (p.images && p.images.length > 0) {
+        try {
+          p._thumb = await invoke('read_image_base64', { path: p.images[0] });
+        } catch { p._thumb = null; }
+      } else {
+        p._thumb = null;
+      }
+    }
+    products.value = prods;
   } catch (error) {
     console.error("Failed to load products:", error);
   }
@@ -43,12 +61,20 @@ async function loadProducts() {
 async function openModal(product = null) {
   if (product) {
     isEditing.value = true;
-    form.value = { ...product, images: [] }; // Reset images initially
+    form.value = { ...product, images: [], imagesPreviews: [] };
 
-    // Fetch images for this product
     try {
-      const images = await invoke('get_product_images', { productId: product.id });
-      form.value.images = images || [];
+      const paths = await invoke('get_product_images', { productId: product.id });
+      form.value.images = paths || [];
+      // Convert to base64 for preview
+      const previews = [];
+      for (const p of form.value.images) {
+        try {
+          const b64 = await invoke('read_image_base64', { path: p });
+          previews.push(b64);
+        } catch { previews.push(null); }
+      }
+      form.value.imagesPreviews = previews;
     } catch (e) {
       console.error("Failed to load images", e);
     }
@@ -65,7 +91,8 @@ async function openModal(product = null) {
       stock_quantity: 0,
       unit: "pcs",
       tax_percentage: 0,
-      images: []
+      images: [],
+      imagesPreviews: []
     };
   }
   showModal.value = true;
@@ -86,10 +113,14 @@ async function selectImages() {
     });
 
     if (selected) {
-      if (Array.isArray(selected)) {
-        form.value.images = [...form.value.images, ...selected];
-      } else {
-        form.value.images.push(selected);
+      const paths = Array.isArray(selected) ? selected : [selected];
+      form.value.images = [...form.value.images, ...paths];
+      // Generate previews for new images
+      for (const p of paths) {
+        try {
+          const b64 = await invoke('read_image_base64', { path: p });
+          form.value.imagesPreviews.push(b64);
+        } catch { form.value.imagesPreviews.push(null); }
       }
     }
   } catch (err) {
@@ -99,10 +130,7 @@ async function selectImages() {
 
 function removeImage(index) {
   form.value.images.splice(index, 1);
-}
-
-function getAssetUrl(path) {
-  return convertFileSrc(path);
+  form.value.imagesPreviews.splice(index, 1);
 }
 
 async function saveProduct() {
@@ -121,7 +149,7 @@ async function saveProduct() {
       created_at: form.value.created_at,
       updated_at: form.value.updated_at,
       is_deleted: 0,
-      images: null // Handled separately
+      images: null
     };
 
     if (isEditing.value) {
@@ -154,156 +182,160 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold text-gray-800">Products</h1>
+  <div class="h-full flex flex-col space-y-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Products</h1>
       <button @click="openModal()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition">
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition text-sm">
         + Add Product
       </button>
     </div>
 
     <!-- Search -->
-    <div class="bg-white p-4 rounded-lg shadow">
+    <div class="bg-white p-3 rounded-lg shadow">
       <input v-model="searchQuery" type="text" placeholder="Search by name or code..."
-        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
     </div>
 
     <!-- Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-y-auto">
-      <table class="w-full text-left border-collapse">
-        <thead class="bg-gray-100 text-gray-600 uppercase text-sm font-semibold sticky top-0 z-10">
+    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-x-auto overflow-y-auto">
+      <table class="w-full text-left border-collapse min-w-[700px]">
+        <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-10">
           <tr>
-            <th class="p-4 border-b">Code</th>
-            <th class="p-4 border-b">Name</th>
-            <th class="p-4 border-b">Category</th>
-            <th class="p-4 border-b">Stock</th>
-            <th class="p-4 border-b">Buy Price</th>
-            <th class="p-4 border-b">Sell Price</th>
-            <th class="p-4 border-b text-right">Actions</th>
+            <th class="p-3 border-b">Image</th>
+            <th class="p-3 border-b">Code</th>
+            <th class="p-3 border-b">Name</th>
+            <th class="p-3 border-b">Category</th>
+            <th class="p-3 border-b">Stock</th>
+            <th class="p-3 border-b">Buy Price</th>
+            <th class="p-3 border-b">Sell Price</th>
+            <th class="p-3 border-b text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="text-gray-700">
+        <tbody class="text-gray-700 text-sm">
           <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-gray-50 border-b last:border-b-0">
-            <td class="p-4">{{ product.product_code || '-' }}</td>
-            <td class="p-4 font-medium">{{ product.product_name }}</td>
-            <td class="p-4">{{ product.category || '-' }}</td>
-            <td class="p-4" :class="{ 'text-red-500 font-bold': product.stock_quantity <= 5 }">
+            <td class="p-3">
+              <div class="w-10 h-10 rounded bg-gray-100 overflow-hidden flex-shrink-0">
+                <img v-if="product._thumb" :src="product._thumb" class="w-full h-full object-cover" />
+                <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-xs">N/A</div>
+              </div>
+            </td>
+            <td class="p-3 text-xs font-mono">{{ product.product_code || '-' }}</td>
+            <td class="p-3 font-medium">{{ product.product_name }}</td>
+            <td class="p-3">{{ product.category || '-' }}</td>
+            <td class="p-3" :class="{ 'text-red-500 font-bold': product.stock_quantity <= 5 }">
               {{ product.stock_quantity }} {{ product.unit }}
             </td>
-            <td class="p-4">{{ product.buying_price.toFixed(2) }}</td>
-            <td class="p-4">{{ product.default_selling_price.toFixed(2) }}</td>
-            <td class="p-4 text-right space-x-2">
-              <button @click="openModal(product)" class="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+            <td class="p-3">{{ currencySymbol }}{{ product.buying_price.toFixed(2) }}</td>
+            <td class="p-3">{{ currencySymbol }}{{ product.default_selling_price.toFixed(2) }}</td>
+            <td class="p-3 text-right space-x-1">
+              <button @click="openModal(product)"
+                class="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Edit</button>
               <button @click="deleteProduct(product.id)"
-                class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+                class="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50">Delete</button>
             </td>
           </tr>
           <tr v-if="filteredProducts.length === 0">
-            <td colspan="7" class="p-8 text-center text-gray-500">No products found.</td>
+            <td colspan="8" class="p-8 text-center text-gray-500">No products found.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative h-[90vh] flex flex-col">
-        <button @click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-        <h2 class="text-2xl font-bold mb-6 text-gray-800 shrink-0">{{ isEditing ? 'Edit Product' : 'Add New Product' }}
+    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-5 relative max-h-[90vh] flex flex-col">
+        <button @click="closeModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl">✕</button>
+        <h2 class="text-xl font-bold mb-4 text-gray-800 shrink-0">{{ isEditing ? 'Edit Product' : 'Add New Product' }}
         </h2>
 
-        <div class="overflow-y-auto flex-1 pr-2">
-          <div class="grid grid-cols-2 gap-6">
-            <div class="col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+        <div class="overflow-y-auto flex-1 pr-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
               <input v-model="form.product_name" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Product Code (SKU)</label>
               <input v-model="form.product_code" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <input v-model="form.category" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
               <input v-model="form.brand" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Unit (pcs, kg)</label>
               <input v-model="form.unit" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Buying Price (Cost)</label>
               <div class="relative">
-                <span class="absolute left-3 top-2 text-gray-500">৳</span>
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
                 <input v-model.number="form.buying_price" type="number" step="0.01"
-                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none">
+                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
               </div>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Selling Price</label>
               <div class="relative">
-                <span class="absolute left-3 top-2 text-gray-500">৳</span>
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
                 <input v-model.number="form.default_selling_price" type="number" step="0.01"
-                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none">
+                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
               </div>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Initial Stock</label>
               <input v-model.number="form.stock_quantity" type="number"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm"
                 :disabled="isEditing">
-              <span v-if="isEditing" class="text-xs text-gray-500">Stock managed via Stock Entries & Sales</span>
+              <span v-if="isEditing" class="text-xs text-gray-500">Stock managed via Buying & Selling</span>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tax %</label>
               <input v-model.number="form.tax_percentage" type="number" step="0.1"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none">
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
 
             <!-- Image Upload Section -->
-            <div class="col-span-2 border-t pt-4 mt-2">
+            <div class="sm:col-span-2 border-t pt-3 mt-1">
               <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-medium text-gray-700">Product Images</label>
                 <button @click="selectImages"
-                  class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded border">
+                  class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded border">
                   Select Images
                 </button>
               </div>
 
-              <div class="grid grid-cols-4 gap-4 mt-2">
-                <div v-for="(img, index) in form.images" :key="index"
+              <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">
+                <div v-for="(preview, index) in form.imagesPreviews" :key="index"
                   class="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden border">
-                  <img :src="getAssetUrl(img)" class="w-full h-full object-cover">
+                  <img v-if="preview" :src="preview" class="w-full h-full object-cover">
+                  <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Error</div>
                   <button @click="removeImage(index)"
-                    class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition shadow">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd" />
-                    </svg>
+                    class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow">
+                    ×
                   </button>
                 </div>
-                <!-- Placeholder if empty -->
-                <div v-if="form.images.length === 0"
-                  class="col-span-4 text-center text-gray-400 py-4 italic border-2 border-dashed rounded-lg">
-                  No images selected. Click "Select Images" to add.
+                <div v-if="form.imagesPreviews.length === 0"
+                  class="col-span-3 sm:col-span-4 text-center text-gray-400 py-4 text-sm italic border-2 border-dashed rounded-lg">
+                  No images selected.
                 </div>
               </div>
             </div>
@@ -311,11 +343,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end space-x-3 shrink-0 pt-4 border-t">
+        <div class="mt-4 flex justify-end space-x-3 shrink-0 pt-3 border-t">
           <button @click="closeModal"
-            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">Cancel</button>
+            class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium text-sm">Cancel</button>
           <button @click="saveProduct"
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow">
+            class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow text-sm">
             {{ isEditing ? 'Update Product' : 'Save Product' }}
           </button>
         </div>

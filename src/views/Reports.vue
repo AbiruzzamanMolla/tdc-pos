@@ -91,8 +91,8 @@ onMounted(() => {
 
 <template>
   <div class="h-full flex flex-col space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold text-gray-800">Reports</h1>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Reports</h1>
       <div class="space-x-2">
         <button @click="exportPDF"
           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
@@ -127,7 +127,7 @@ onMounted(() => {
     </div>
 
     <!-- Content -->
-    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-y-auto">
+    <div class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-x-auto overflow-y-auto">
 
       <!-- Summaries -->
       <div v-if="currentTab === 'sales'" class="bg-blue-50 p-4 border-b border-blue-100 flex gap-8">
@@ -149,8 +149,8 @@ onMounted(() => {
       </div>
 
       <!-- Table: Sales -->
-      <table v-if="currentTab === 'sales'" class="w-full text-left border-collapse">
-        <thead class="bg-gray-100 text-gray-600 uppercase text-sm font-semibold">
+      <table v-if="currentTab === 'sales'" class="w-full text-left border-collapse min-w-[500px]">
+        <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-10">
           <tr>
             <th class="p-4 border-b">Date</th>
             <th class="p-4 border-b">Order #</th>
@@ -174,8 +174,8 @@ onMounted(() => {
       </table>
 
       <!-- Table: Inventory -->
-      <table v-if="currentTab === 'inventory'" class="w-full text-left border-collapse">
-        <thead class="bg-gray-100 text-gray-600 uppercase text-sm font-semibold">
+      <table v-if="currentTab === 'inventory'" class="w-full text-left border-collapse min-w-[500px]">
+        <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-10">
           <tr>
             <th class="p-4 border-b">Product</th>
             <th class="p-4 border-b">Stock Qty</th>

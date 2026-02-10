@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0] - 2026-02-11
+
+### Added
+
+- **Editable Selling Prices**: Per-item price override in the Selling cart; discount auto-calculated from price differences.
+- **Base64 Image Display**: New `read_image_base64` backend command for reliable cross-platform image display.
+- **Delete Functionality**: Delete buttons with stock reversal for both Buying entries and Sales.
+- **Product Thumbnails**: Product list now shows image thumbnails.
+
+### Changed
+
+- **Renamed Pages**: "Stocks" → "Buying", "Orders" → "Selling" for clearer UX.
+- **Buying Page Redesign**: Buying now uses POS-style two-panel layout (products + cart) matching the Selling page.
+- **Responsive Tables**: All tables now scroll horizontally on small screens with min-width constraints.
+- **Responsive Layouts**: All pages adapt to smaller window sizes with flex-col fallbacks.
+- **Currency from Settings**: All pages dynamically use the currency symbol from Settings.
+
+### Fixed
+
+- **Image Loading**: Switched from `convertFileSrc` to base64 data URIs for reliable image display.
+- **Dashboard Links**: Quick action links now point to correct Buying/Selling routes.
+- **Version Display**: App sidebar shows correct version number.
+
 ## [0.2.1] - 2026-02-11
 
 ### Fixed

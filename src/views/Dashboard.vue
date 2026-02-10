@@ -103,17 +103,17 @@ onMounted(() => {
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <router-link to="/orders"
+      <router-link to="/selling"
         class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
-        Go to POS
+        Go to Selling
       </router-link>
       <router-link to="/products"
         class="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
         Manage Products
       </router-link>
-      <router-link to="/stocks"
+      <router-link to="/buying"
         class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-xl shadow flex items-center justify-center text-lg font-bold transition transform hover:scale-105">
-        New Stock Entry
+        New Buying Entry
       </router-link>
     </div>
   </div>

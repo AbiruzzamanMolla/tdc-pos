@@ -13,11 +13,20 @@ const stats = ref({
   product_count: 0
 });
 
+const currencySymbol = ref('$');
+
 async function loadStats() {
   try {
-    stats.value = await invoke('get_dashboard_stats');
+    const [statsData, settingsData] = await Promise.all([
+      invoke('get_dashboard_stats'),
+      invoke('get_settings')
+    ]);
+    stats.value = statsData;
+    if (settingsData && settingsData.currency_symbol) {
+      currencySymbol.value = settingsData.currency_symbol;
+    }
   } catch (error) {
-    console.error("Failed to load dashboard stats:", error);
+    console.error("Failed to load dashboard data:", error);
   }
 }
 
@@ -44,19 +53,20 @@ onMounted(() => {
       <!-- Sales Today -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div class="text-gray-500 text-sm font-medium uppercase tracking-wider">Sales Today</div>
-        <div class="text-3xl font-bold text-gray-800 mt-2">${{ stats.sales_today.toFixed(2) }}</div>
+        <div class="text-3xl font-bold text-gray-800 mt-2">{{ currencySymbol }}{{ stats.sales_today.toFixed(2) }}</div>
       </div>
 
       <!-- Sales This Month -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div class="text-gray-500 text-sm font-medium uppercase tracking-wider">Sales This Month</div>
-        <div class="text-3xl font-bold text-blue-600 mt-2">${{ stats.sales_month.toFixed(2) }}</div>
+        <div class="text-3xl font-bold text-blue-600 mt-2">{{ currencySymbol }}{{ stats.sales_month.toFixed(2) }}</div>
       </div>
 
       <!-- Total Profit -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div class="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Profit</div>
-        <div class="text-3xl font-bold text-green-600 mt-2">${{ stats.total_profit.toFixed(2) }}</div>
+        <div class="text-3xl font-bold text-green-600 mt-2">{{ currencySymbol }}{{ stats.total_profit.toFixed(2) }}
+        </div>
       </div>
 
       <!-- Low Stock -->
@@ -81,12 +91,12 @@ onMounted(() => {
       </div>
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
-        <div class="text-2xl font-bold text-gray-700">${{ stats.total_purchases.toFixed(2) }}</div>
+        <div class="text-2xl font-bold text-gray-700">{{ currencySymbol }}{{ stats.total_purchases.toFixed(2) }}</div>
         <div class="text-gray-400 text-sm">Total Purchases (Cost)</div>
       </div>
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center text-center">
-        <div class="text-2xl font-bold text-gray-700">${{ stats.total_sales.toFixed(2) }}</div>
+        <div class="text-2xl font-bold text-gray-700">{{ currencySymbol }}{{ stats.total_sales.toFixed(2) }}</div>
         <div class="text-gray-400 text-sm">Lifetime Sales</div>
       </div>
     </div>

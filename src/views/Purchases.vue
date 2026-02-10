@@ -5,7 +5,10 @@ import { invoke } from '@tauri-apps/api/core';
 const purchases = ref([]);
 const products = ref([]);
 const showModal = ref(false);
+const showDetailsModal = ref(false);
+const selectedPurchase = ref(null);
 const searchQuery = ref("");
+const currencySymbol = ref('$');
 
 // Form Data
 const form = reactive({
@@ -34,7 +37,14 @@ const totalAmount = computed(() => {
 
 async function loadPurchases() {
   try {
-    purchases.value = await invoke('get_purchases');
+    const [purchasesData, settingsData] = await Promise.all([
+      invoke('get_purchases'),
+      invoke('get_settings')
+    ]);
+    purchases.value = purchasesData;
+    if (settingsData && settingsData.currency_symbol) {
+      currencySymbol.value = settingsData.currency_symbol;
+    }
   } catch (error) {
     console.error("Failed to load purchases:", error);
   }
@@ -62,6 +72,25 @@ function openModal() {
 
 function closeModal() {
   showModal.value = false;
+  showDetailsModal.value = false;
+  selectedPurchase.value = null;
+}
+
+async function viewPurchaseDetails(purchase) {
+  selectedPurchase.value = purchase;
+  // We might need to fetch items if they are not included in the purchase object list.
+  // The current Struct `Purchase` does not have items.
+  // We need a command `get_purchase_items(purchase_id)`.
+  // Let's implement it or fetch it ad-hoc if backend supports.
+  // Assuming we need to add a command for this.
+  try {
+    const items = await invoke('get_purchase_items', { purchaseId: purchase.purchase_id });
+    selectedPurchase.value = { ...purchase, items: items };
+    showDetailsModal.value = true;
+  } catch (e) {
+    console.error("Failed to load purchase items", e);
+    alert("Failed to load details");
+  }
 }
 
 function addProductToPurchase(product) {
@@ -155,8 +184,12 @@ onMounted(() => {
             <td class="p-4">{{ purchase.purchase_date }}</td>
             <td class="p-4 font-medium">{{ purchase.supplier_name || '-' }}</td>
             <td class="p-4 text-gray-500 text-sm">{{ purchase.invoice_number || '-' }}</td>
-            <td class="p-4 text-right font-bold">{{ purchase.total_amount.toFixed(2) }}</td>
+            <td class="p-4 text-right font-bold">{{ currencySymbol }}{{ purchase.total_amount.toFixed(2) }}</td>
             <td class="p-4 text-gray-500 text-sm truncate max-w-xs">{{ purchase.notes }}</td>
+            <td class="p-4 text-center">
+              <button @click="viewPurchaseDetails(purchase)"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+            </td>
           </tr>
           <tr v-if="purchases.length === 0">
             <td colspan="5" class="p-8 text-center text-gray-500">No purchase history found.</td>
@@ -252,7 +285,7 @@ onMounted(() => {
           </div>
           <div class="text-right">
             <div class="text-sm text-gray-500 mb-1">Total Amount</div>
-            <div class="text-3xl font-bold text-gray-800">{{ totalAmount.toFixed(2) }}</div>
+            <div class="text-3xl font-bold text-gray-800">{{ currencySymbol }}{{ totalAmount.toFixed(2) }}</div>
             <div class="mt-4 space-x-3">
               <button @click="closeModal"
                 class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
@@ -261,6 +294,61 @@ onMounted(() => {
                 Purchase</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div v-if="showDetailsModal && selectedPurchase"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] flex flex-col">
+      <button @click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl">✕</button>
+      <h2 class="text-2xl font-bold mb-1 text-gray-800">Purchase Details</h2>
+      <div class="text-sm text-gray-500 mb-6">Invoice: {{ selectedPurchase.invoice_number || 'N/A' }} | Date: {{
+        selectedPurchase.purchase_date }}</div>
+
+      <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+        <div>
+          <span class="block text-xs text-gray-500 uppercase">Supplier</span>
+          <span class="font-medium text-gray-800">{{ selectedPurchase.supplier_name || 'N/A' }}</span>
+        </div>
+        <div>
+          <span class="block text-xs text-gray-500 uppercase">Phone</span>
+          <span class="font-medium text-gray-800">{{ selectedPurchase.supplier_phone || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead class="bg-gray-100 text-gray-600">
+            <tr>
+              <th class="p-3 border-b">Product</th>
+              <th class="p-3 border-b text-right">Qty</th>
+              <th class="p-3 border-b text-right">Buy Price</th>
+              <th class="p-3 border-b text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in selectedPurchase.items" :key="item.id" class="border-b last:border-0 hover:bg-gray-50">
+              <td class="p-3 font-medium">{{ item.product_name }}</td>
+              <td class="p-3 text-right">{{ item.quantity }}</td>
+              <td class="p-3 text-right">{{ currencySymbol }}{{ item.buying_price.toFixed(2) }}</td>
+              <td class="p-3 text-right font-medium">{{ currencySymbol }}{{ item.subtotal.toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="border-t mt-4 pt-4 flex justify-between items-end">
+        <div class="w-2/3 pr-4">
+          <p class="text-xs text-gray-500 uppercase mb-1">Notes</p>
+          <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded">{{ selectedPurchase.notes || 'No notes.' }}</p>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-gray-500 uppercase">Total Amount</div>
+          <div class="text-2xl font-bold text-gray-800">{{ currencySymbol }}{{ selectedPurchase.total_amount.toFixed(2)
+            }}</div>
         </div>
       </div>
     </div>

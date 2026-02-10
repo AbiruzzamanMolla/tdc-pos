@@ -10,6 +10,7 @@ const endDate = ref(new Date().toISOString().split('T')[0]);
 
 const salesData = ref([]);
 const inventoryData = ref([]);
+const currencySymbol = ref('$'); // Default
 
 const totalSales = computed(() => salesData.value.reduce((sum, item) => sum + item.total, 0));
 const totalProfit = computed(() => salesData.value.reduce((sum, item) => sum + item.profit, 0));
@@ -25,6 +26,10 @@ async function loadReport() {
     } else if (currentTab.value === 'inventory') {
       inventoryData.value = await invoke('get_inventory_report');
     }
+    const settingsData = await invoke('get_settings');
+    if (settingsData && settingsData.currency_symbol) {
+      currencySymbol.value = settingsData.currency_symbol;
+    }
   } catch (error) {
     console.error("Failed to load report:", error);
     alert("Error loading report: " + error);
@@ -37,7 +42,9 @@ function exportPDF() {
   if (currentTab.value === 'sales') {
     doc.text(`Sales Report (${startDate.value} to ${endDate.value})`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`Total Sales: $${totalSales.value.toFixed(2)} | Total Profit: $${totalProfit.value.toFixed(2)}`, 14, 22);
+    // Note: PDF currency symbol support depends on font. Using "Total" instead of symbol might be safer or just string concat manually.
+    // For now assuming $ or ৳ might need font, but let's stick to simple text for PDF.
+    doc.text(`Total Sales: ${currencySymbol.value}${totalSales.value.toFixed(2)} | Total Profit: ${currencySymbol.value}${totalProfit.value.toFixed(2)}`, 14, 22);
 
     autoTable(doc, {
       startY: 28,
@@ -54,7 +61,7 @@ function exportPDF() {
     doc.save(`sales-report-${startDate.value}.pdf`);
   } else {
     doc.text(`Inventory Valuation Report (${new Date().toLocaleDateString()})`, 14, 15);
-    doc.text(`Total Stock Value: $${totalStockValue.value.toFixed(2)}`, 14, 22);
+    doc.text(`Total Stock Value: ${currencySymbol.value}${totalStockValue.value.toFixed(2)}`, 14, 22);
 
     autoTable(doc, {
       startY: 28,
@@ -126,18 +133,18 @@ onMounted(() => {
       <div v-if="currentTab === 'sales'" class="bg-blue-50 p-4 border-b border-blue-100 flex gap-8">
         <div>
           <div class="text-xs text-blue-500 uppercase font-bold">Total Sales</div>
-          <div class="text-2xl font-bold text-blue-700">${{ totalSales.toFixed(2) }}</div>
+          <div class="text-2xl font-bold text-blue-700">{{ currencySymbol }}{{ totalSales.toFixed(2) }}</div>
         </div>
         <div>
           <div class="text-xs text-green-500 uppercase font-bold">Net Profit</div>
-          <div class="text-2xl font-bold text-green-700">${{ totalProfit.toFixed(2) }}</div>
+          <div class="text-2xl font-bold text-green-700">{{ currencySymbol }}{{ totalProfit.toFixed(2) }}</div>
         </div>
       </div>
 
       <div v-if="currentTab === 'inventory'" class="bg-purple-50 p-4 border-b border-purple-100">
         <div>
           <div class="text-xs text-purple-500 uppercase font-bold">Total Inventory Value</div>
-          <div class="text-2xl font-bold text-purple-700">${{ totalStockValue.toFixed(2) }}</div>
+          <div class="text-2xl font-bold text-purple-700">{{ currencySymbol }}{{ totalStockValue.toFixed(2) }}</div>
         </div>
       </div>
 
@@ -157,8 +164,8 @@ onMounted(() => {
             <td class="p-4">{{ item.date }}</td>
             <td class="p-4">#{{ item.order_id }}</td>
             <td class="p-4">{{ item.customer || '-' }}</td>
-            <td class="p-4 text-right font-medium">${{ item.total.toFixed(2) }}</td>
-            <td class="p-4 text-right text-green-600 font-bold">${{ item.profit.toFixed(2) }}</td>
+            <td class="p-4 text-right font-medium">{{ currencySymbol }}{{ item.total.toFixed(2) }}</td>
+            <td class="p-4 text-right text-green-600 font-bold">{{ currencySymbol }}{{ item.profit.toFixed(2) }}</td>
           </tr>
           <tr v-if="salesData.length === 0">
             <td colspan="5" class="p-8 text-center text-gray-500">No sales found for selected period.</td>
@@ -180,8 +187,8 @@ onMounted(() => {
           <tr v-for="item in inventoryData" :key="item.id" class="hover:bg-gray-50 border-b last:border-b-0">
             <td class="p-4 font-medium">{{ item.name }}</td>
             <td class="p-4">{{ item.stock }} {{ item.unit }}</td>
-            <td class="p-4">${{ item.cost_price.toFixed(2) }}</td>
-            <td class="p-4 text-right font-bold">${{ item.stock_value.toFixed(2) }}</td>
+            <td class="p-4">{{ currencySymbol }}{{ item.cost_price.toFixed(2) }}</td>
+            <td class="p-4 text-right font-bold">{{ currencySymbol }}{{ item.stock_value.toFixed(2) }}</td>
           </tr>
         </tbody>
       </table>

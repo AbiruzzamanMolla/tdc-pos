@@ -43,6 +43,8 @@ pub fn run() {
             commands::create_purchase,
             commands::create_order,
             commands::get_purchases,
+            commands::get_purchase_items,
+            commands::get_order_items,
             commands::get_orders,
             commands::get_dashboard_stats,
             commands::get_sales_report,

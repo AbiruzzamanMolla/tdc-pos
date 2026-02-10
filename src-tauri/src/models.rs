@@ -19,6 +19,7 @@ pub struct Product {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ProductImage {
     pub id: Option<i64>,
     pub product_id: i64,
@@ -42,6 +43,17 @@ pub struct PurchaseItem {
     pub id: Option<i64>,
     pub purchase_id: Option<i64>,
     pub product_id: i64,
+    pub quantity: f64,
+    pub buying_price: f64,
+    pub subtotal: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PurchaseItemDetail {
+    pub id: Option<i64>,
+    pub purchase_id: Option<i64>,
+    pub product_id: i64,
+    pub product_name: String,
     pub quantity: f64,
     pub buying_price: f64,
     pub subtotal: f64,
@@ -73,6 +85,17 @@ pub struct OrderItem {
     pub selling_price: f64,
     pub subtotal: f64,
     pub buying_price_snapshot: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrderItemDetail {
+    pub id: Option<i64>,
+    pub order_id: Option<i64>,
+    pub product_id: i64,
+    pub product_name: String,
+    pub quantity: f64,
+    pub selling_price: f64,
+    pub subtotal: f64,
 }
 
 

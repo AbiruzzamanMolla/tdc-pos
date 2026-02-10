@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1] - 2026-02-11
+
+### Fixed
+
+- **Images**: Fixed image persistence and loading by copying files to App Data directory.
+- **Currency**: Fixed currency symbol display in Dashboard, Purchases, Orders, and Reports.
+- **Details**: Added detailed view modals for Orders and Purchases.
+- **Warnings**: Fixed unused code warnings in Rust backend.
+
 ## [0.2.0] - 2026-02-10
 
 ### Added

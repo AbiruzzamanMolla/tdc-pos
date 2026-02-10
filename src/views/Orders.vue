@@ -11,6 +11,10 @@ const selectedCategory = ref("All");
 
 // Checkout Form
 const checkoutModal = ref(false);
+const showDetailsModal = ref(false);
+const selectedOrder = ref(null);
+const currencySymbol = ref('$'); // Default
+
 const form = reactive({
   customer_name: "Guest",
   customer_phone: "",
@@ -59,9 +63,28 @@ async function loadProducts() {
 
 async function loadOrders() {
   try {
-    orders.value = await invoke('get_orders');
+    const [ordersData, settingsData] = await Promise.all([
+      invoke('get_orders'),
+      invoke('get_settings')
+    ]);
+    orders.value = ordersData;
+    if (settingsData && settingsData.currency_symbol) {
+      currencySymbol.value = settingsData.currency_symbol;
+    }
   } catch (error) {
     console.error("Failed to load orders:", error);
+  }
+}
+
+async function viewOrderDetails(order) {
+  selectedOrder.value = order;
+  try {
+    const items = await invoke('get_order_items', { orderId: order.order_id });
+    selectedOrder.value = { ...order, items: items };
+    showDetailsModal.value = true;
+  } catch (e) {
+    console.error("Failed to load order items", e);
+    alert("Failed to load details");
   }
 }
 
@@ -206,7 +229,8 @@ onMounted(() => {
             </div>
             <h3 class="font-bold text-gray-800 text-sm truncate">{{ product.product_name }}</h3>
             <div class="flex justify-between items-center mt-2">
-              <span class="text-blue-600 font-bold">${{ product.default_selling_price.toFixed(2) }}</span>
+              <span class="text-blue-600 font-bold">{{ currencySymbol }}{{ product.default_selling_price.toFixed(2)
+                }}</span>
               <span class="text-xs px-2 py-1 rounded-full"
                 :class="product.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
                 {{ product.stock_quantity }} left
@@ -224,7 +248,8 @@ onMounted(() => {
           <div v-for="(item, index) in cart" :key="item.product_id" class="flex justify-between items-center group">
             <div class="flex-1">
               <div class="font-medium text-gray-800">{{ item.product_name }}</div>
-              <div class="text-xs text-gray-500">${{ item.selling_price }} x {{ item.quantity }}</div>
+              <div class="text-xs text-gray-500">{{ currencySymbol }}{{ item.selling_price }} x {{ item.quantity }}
+              </div>
             </div>
             <div class="flex items-center gap-3">
               <div class="flex items-center border rounded-lg">
@@ -232,7 +257,7 @@ onMounted(() => {
                 <span class="px-2 text-sm font-bold">{{ item.quantity }}</span>
                 <button @click="updateQuantity(item, 1)" class="px-2 py-1 text-gray-600 hover:bg-gray-100">+</button>
               </div>
-              <div class="font-bold w-16 text-right">${{ item.subtotal.toFixed(2) }}</div>
+              <div class="font-bold w-16 text-right">{{ currencySymbol }}{{ item.subtotal.toFixed(2) }}</div>
               <button @click="removeFromCart(index)"
                 class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
             </div>
@@ -245,11 +270,11 @@ onMounted(() => {
         <div class="p-4 bg-gray-50 border-t space-y-2">
           <div class="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span>${{ subtotal.toFixed(2) }}</span>
+            <span>{{ currencySymbol }}{{ subtotal.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between text-2xl font-bold text-gray-800 pt-2 border-t border-gray-200">
             <span>Total</span>
-            <span>${{ subtotal.toFixed(2) }}</span>
+            <span>{{ currencySymbol }}{{ subtotal.toFixed(2) }}</span>
           </div>
           <button @click="openCheckout" :disabled="cart.length === 0"
             class="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition">
@@ -269,6 +294,7 @@ onMounted(() => {
             <th class="p-4 border-b">Customer</th>
             <th class="p-4 border-b text-right">Total</th>
             <th class="p-4 border-b">Payment</th>
+            <th class="p-4 border-b text-center">Actions</th>
           </tr>
         </thead>
         <tbody class="text-gray-700">
@@ -276,11 +302,15 @@ onMounted(() => {
             <td class="p-4 text-sm font-mono">#{{ order.order_id }}</td>
             <td class="p-4">{{ order.order_date }}</td>
             <td class="p-4 font-medium">{{ order.customer_name || '-' }}</td>
-            <td class="p-4 text-right font-bold">${{ order.grand_total.toFixed(2) }}</td>
+            <td class="p-4 text-right font-bold">{{ currencySymbol }}{{ order.grand_total.toFixed(2) }}</td>
             <td class="p-4">
               <span class="px-2 py-1 rounded text-xs uppercase font-bold bg-gray-100 text-gray-600">
                 {{ order.payment_method }}
               </span>
+            </td>
+            <td class="p-4 text-center">
+              <button @click="viewOrderDetails(order)"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
             </td>
           </tr>
         </tbody>
@@ -322,7 +352,7 @@ onMounted(() => {
 
           <div class="pt-4 border-t flex justify-between items-center text-xl font-bold text-gray-800">
             <span>Grand Total</span>
-            <span>${{ grandTotal.toFixed(2) }}</span>
+            <span>{{ currencySymbol }}{{ grandTotal.toFixed(2) }}</span>
           </div>
         </div>
 
@@ -332,6 +362,73 @@ onMounted(() => {
           <button @click="processOrder" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">
             Confirm Payment
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div v-if="showDetailsModal && selectedOrder"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] flex flex-col">
+        <button @click="showDetailsModal = false"
+          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl">✕</button>
+        <h2 class="text-2xl font-bold mb-1 text-gray-800">Order Details</h2>
+        <div class="text-sm text-gray-500 mb-6">Order ID: #{{ selectedOrder.order_id }} | Date: {{
+          selectedOrder.order_date }}</div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+          <div>
+            <span class="block text-xs text-gray-500 uppercase">Customer</span>
+            <span class="font-medium text-gray-800">{{ selectedOrder.customer_name || 'Guest' }}</span>
+            <div class="text-xs text-gray-600">{{ selectedOrder.customer_phone }}</div>
+            <div class="text-xs text-gray-600">{{ selectedOrder.customer_address }}</div>
+          </div>
+          <div class="text-right">
+            <span class="block text-xs text-gray-500 uppercase">Payment Method</span>
+            <span class="font-medium text-gray-800 uppercase">{{ selectedOrder.payment_method }}</span>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-gray-100 text-gray-600">
+              <tr>
+                <th class="p-3 border-b">Product</th>
+                <th class="p-3 border-b text-right">Qty</th>
+                <th class="p-3 border-b text-right">Price</th>
+                <th class="p-3 border-b text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in selectedOrder.items" :key="item.id" class="border-b last:border-0 hover:bg-gray-50">
+                <td class="p-3 font-medium">{{ item.product_name }}</td>
+                <td class="p-3 text-right">{{ item.quantity }}</td>
+                <td class="p-3 text-right">{{ currencySymbol }}{{ item.selling_price.toFixed(2) }}</td>
+                <td class="p-3 text-right font-medium">{{ currencySymbol }}{{ item.subtotal.toFixed(2) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-t mt-4 pt-4">
+          <div class="flex justify-between text-sm py-1">
+            <span class="text-gray-600">Subtotal</span>
+            <span class="font-medium">{{ currencySymbol }}{{ selectedOrder.subtotal.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" v-if="selectedOrder.discount > 0">
+            <span class="text-gray-600">Discount</span>
+            <span class="text-red-500">-{{ currencySymbol }}{{ selectedOrder.discount.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" v-if="selectedOrder.delivery_charge > 0">
+            <span class="text-gray-600">Delivery</span>
+            <span class="font-medium">{{ currencySymbol }}{{ selectedOrder.delivery_charge.toFixed(2) }}</span>
+          </div>
+
+          <div class="flex justify-between items-end mt-2 pt-2 border-t border-dashed">
+            <div class="text-xs text-gray-500 uppercase">Grand Total</div>
+            <div class="text-2xl font-bold text-gray-800">{{ currencySymbol }}{{ selectedOrder.grand_total.toFixed(2) }}
+            </div>
+          </div>
         </div>
       </div>
     </div>

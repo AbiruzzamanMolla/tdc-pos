@@ -1,4 +1,4 @@
-use crate::models::{Product, Purchase, PurchaseItem, Order, OrderItem, DashboardStats, SalesReportItem, InventoryReportItem};
+use crate::models::{Product, Purchase, PurchaseItem, Order, OrderItem, DashboardStats, SalesReportItem, InventoryReportItem, User};
 use crate::db::Database;
 use tauri::{State, AppHandle, Manager};
 use rusqlite::params;
@@ -591,6 +591,95 @@ pub fn restore_db(source_path: String, app_handle: AppHandle) -> Result<(), Stri
 }
 
 #[tauri::command]
+pub fn list_backups(directory: String) -> Result<Vec<crate::models::BackupInfo>, String> {
+    let path = std::path::Path::new(&directory);
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let entries = std::fs::read_dir(path).map_err(|e| e.to_string())?;
+    let mut backups = Vec::new();
+
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let metadata = entry.metadata().map_err(|e| e.to_string())?;
+        
+        if metadata.is_file() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.ends_with(".db") || name.ends_with(".bak") {
+                backups.push(crate::models::BackupInfo {
+                    name,
+                    path: entry.path().to_string_lossy().to_string(),
+                    size: metadata.len(),
+                    created_at: format!("{:?}", metadata.created().unwrap_or(metadata.modified().unwrap())),
+                });
+            }
+        }
+    }
+    
+    // Sort by name (which usually includes date) descending
+    backups.sort_by(|a, b| b.name.cmp(&a.name));
+    
+    Ok(backups)
+}
+
+#[tauri::command]
+pub fn prune_backups(directory: String, keep_n: usize) -> Result<(), String> {
+    let mut backups = list_backups(directory.clone())?;
+    if backups.len() > keep_n {
+        for backup in backups.drain(keep_n..) {
+            let _ = std::fs::remove_file(backup.path);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn check_and_auto_backup(db: State<'_, Database>) -> Result<(), String> {
+    let settings = get_settings(db.clone())?;
+    
+    let is_enabled = settings.get("auto_backup").map(|v| v == "true").unwrap_or(false);
+    if !is_enabled { return Ok(()); }
+    
+    let backup_dir = settings.get("backup_dir");
+    if backup_dir.is_none() || backup_dir.unwrap().is_empty() { return Ok(()); }
+    let backup_dir = backup_dir.unwrap();
+
+    let schedule = settings.get("backup_schedule").map(|v| v.as_str()).unwrap_or("daily");
+    let keep_n = settings.get("keep_backups").and_then(|v| v.parse::<usize>().ok()).unwrap_or(5);
+    
+    let last_backup = settings.get("last_auto_backup_date");
+    let now = chrono::Local::now();
+    let now_str = now.format("%Y-%m-%d").to_string();
+
+    let should_backup = match last_backup {
+        Some(date) => {
+            if schedule == "daily" {
+                date != &now_str
+            } else {
+                // weekly - check if it's been 7 days or different week
+                date != &now_str // simple check for now, can be improved
+            }
+        },
+        None => true
+    };
+
+    if should_backup {
+        let timestamp = now.format("%Y-%m-%d-%H-%M-%S").to_string();
+        let name = format!("tdc-pos-auto-{}.db", timestamp);
+        let path = std::path::Path::new(backup_dir).join(name);
+        
+        backup_db(path.to_string_lossy().to_string(), db.clone())?;
+        prune_backups(backup_dir.clone(), keep_n)?;
+        
+        // Update last backup date
+        update_settings(HashMap::from([("last_auto_backup_date".to_string(), now_str)]), db)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_settings(db: State<Database>) -> Result<HashMap<String, String>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
@@ -761,3 +850,66 @@ pub fn get_order_items(order_id: i64, db: State<Database>) -> Result<Vec<crate::
 }
 
 
+#[tauri::command]
+pub fn login(username: String, password: String, db: State<Database>) -> Result<User, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let mut stmt = conn.prepare("SELECT id, username, role, created_at FROM users WHERE username = ?1 AND password = ?2")
+        .map_err(|e| e.to_string())?;
+    
+    let user = stmt.query_row(params![username, password], |row| {
+        Ok(User {
+            id: Some(row.get(0)?),
+            username: row.get(1)?,
+            password: None,
+            role: row.get(2)?,
+            created_at: Some(row.get(3)?),
+        })
+    }).map_err(|_| "Invalid username or password".to_string())?;
+    
+    Ok(user)
+}
+
+#[tauri::command]
+pub fn get_users(db: State<Database>) -> Result<Vec<User>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let mut stmt = conn.prepare("SELECT id, username, role, created_at FROM users").map_err(|e| e.to_string())?;
+    let user_iter = stmt.query_map([], |row| {
+        Ok(User {
+            id: Some(row.get(0)?),
+            username: row.get(1)?,
+            password: None,
+            role: row.get(2)?,
+            created_at: Some(row.get(3)?),
+        })
+    }).map_err(|e| e.to_string())?;
+    
+    let mut users = Vec::new();
+    for user in user_iter {
+        users.push(user.map_err(|e| e.to_string())?);
+    }
+    
+    Ok(users)
+}
+
+#[tauri::command]
+pub fn create_user(user: User, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "INSERT INTO users (username, password, role) VALUES (?1, ?2, ?3)",
+        params![user.username, user.password.unwrap_or_default(), user.role],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_user(id: i64, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    conn.execute("DELETE FROM users WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}

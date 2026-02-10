@@ -129,3 +129,20 @@ pub struct InventoryReportItem {
     pub cost_price: f64,
     pub stock_value: f64,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    pub id: Option<i64>,
+    pub username: String,
+    pub password: Option<String>,
+    pub role: String,
+    pub created_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BackupInfo {
+    pub name: String,
+    pub path: String,
+    pub size: u64,
+    pub created_at: String,
+}

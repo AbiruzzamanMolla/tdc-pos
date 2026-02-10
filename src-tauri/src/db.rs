@@ -106,6 +106,19 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             key TEXT PRIMARY KEY,
             value TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'worker',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Insert default admin if no users exist
+        INSERT OR IGNORE INTO users (username, password, role) 
+        SELECT 'admin', 'admin123', 'admin' 
+        WHERE (SELECT COUNT(*) FROM users) = 0;
         "
     )?;
     

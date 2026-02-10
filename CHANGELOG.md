@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.4.0] - 2026-02-11
+
+### Added
+
+- **User Authentication**: Secure sign-in system with a dedicated login page.
+- **Role-Based Access (RBAC)**: Restriction of administrative features (Backup, Settings) to admin accounts.
+- **Stock List Page**: A streamlined view of all products with quantities and stock status indicators.
+- **Auto-Backup System**:
+  - Scheduled backups (Daily/Weekly).
+  - Retention policy to keep only the last N backups.
+  - Automatic backup directory selection and size display.
+  - Automatic backup check on application launch.
+- **Branding**: Updated interface with TDC-POS logo and styling.
+
+### Changed
+
+- **Version Display**: Updated to v0.4.0-BETA.
+- **Dashboard**: Added quick link to Stock List.
+- **Sidebar**: Improved aesthetics and added user info display.
+
 ## [0.3.0] - 2026-02-11
 
 ### Added

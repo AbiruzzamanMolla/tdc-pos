@@ -1,6 +1,6 @@
 [package]
 name = "tauri-apptdc-pos"
-version = "0.3.0"
+version = "0.4.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -26,4 +26,5 @@ serde_json = "1"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
+chrono = { version = "0.4.43", features = ["clock"] }
 

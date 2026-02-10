@@ -38,6 +38,13 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             is_deleted INTEGER DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS product_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS purchases (
             purchase_id INTEGER PRIMARY KEY AUTOINCREMENT,
             supplier_name TEXT,

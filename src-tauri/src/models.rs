@@ -15,6 +15,14 @@ pub struct Product {
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
     pub is_deleted: i32,
+    pub images: Option<Vec<String>>, // Not a DB column, populated manually
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProductImage {
+    pub id: Option<i64>,
+    pub product_id: i64,
+    pub image_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,4 +73,36 @@ pub struct OrderItem {
     pub selling_price: f64,
     pub subtotal: f64,
     pub buying_price_snapshot: Option<f64>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DashboardStats {
+    pub total_sales: f64,
+    pub sales_today: f64,
+    pub sales_month: f64,
+    pub total_purchases: f64,
+    pub total_profit: f64,
+    pub low_stock_count: i64,
+    pub order_count: i64,
+    pub product_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SalesReportItem {
+    pub order_id: i64,
+    pub date: String,
+    pub customer: Option<String>,
+    pub total: f64,
+    pub profit: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InventoryReportItem {
+    pub id: i64,
+    pub name: String,
+    pub stock: f64,
+    pub unit: Option<String>,
+    pub cost_price: f64,
+    pub stock_value: f64,
 }

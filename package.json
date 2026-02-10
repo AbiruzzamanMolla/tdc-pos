@@ -1,7 +1,7 @@
 {
-  "name": "tauri-apptdc-pos",
+  "name": "tdc-pos",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,9 @@
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-sql": "^2.3.2",
+    "@tauri-apps/plugin-upload": "^2.4.0",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "pinia": "^3.0.4",
     "vue": "^3.5.13",
     "vue-router": "^5.0.2"

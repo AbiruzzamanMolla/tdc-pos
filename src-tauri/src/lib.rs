@@ -10,9 +10,21 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // Check for restore file
+            let app_dir = app.path().app_data_dir().expect("failed to get app data dir");
+            let db_path = app_dir.join("tdc-pos.db");
+            let restore_path = app_dir.join("restore.db");
+
+            if restore_path.exists() {
+                // Perform restore
+                 std::fs::copy(&restore_path, &db_path).expect("failed to restore database");
+                 std::fs::remove_file(&restore_path).expect("failed to remove restore file");
+                 println!("Database restored successfully.");
+            }
+
             // Initialize database
             let conn = db::init_db(app.handle())
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                .expect("failed to init db");
             
             // Manage database connection in state
             app.manage(Database { conn: Mutex::new(conn) });
@@ -27,8 +39,18 @@ pub fn run() {
             commands::create_product,
             commands::update_product,
             commands::delete_product,
+            commands::get_product_images,
             commands::create_purchase,
-            commands::create_order
+            commands::create_order,
+            commands::get_purchases,
+            commands::get_orders,
+            commands::get_dashboard_stats,
+            commands::get_sales_report,
+            commands::get_inventory_report,
+            commands::backup_db,
+            commands::restore_db,
+            commands::get_settings,
+            commands::update_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

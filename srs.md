@@ -25,8 +25,7 @@ The application will be used to manage:
 
 The application must work fully offline and store all data locally using SQLite.
 
-===================================================== 2. TECHNOLOGY STACK (MANDATORY)
-=====================================================
+# ===================================================== 2. TECHNOLOGY STACK (MANDATORY)
 
 Frontend:
 
@@ -47,8 +46,7 @@ Other:
 - Local file system access for backup/restore
 - Cross-platform support (Windows, Linux, macOS)
 
-===================================================== 3. USER ROLE
-=====================================================
+# ===================================================== 3. USER ROLE
 
 Admin (default user):
 
@@ -56,8 +54,7 @@ Admin (default user):
 - No authentication required initially
 - Architecture must support adding authentication later
 
-===================================================== 4. CORE MODULES & FEATURES
-=====================================================
+# ===================================================== 4. CORE MODULES & FEATURES
 
 ---
 
@@ -78,6 +75,10 @@ Product Table Fields:
 - created_at
 - updated_at
 - is_deleted (soft delete)
+
+Product Images:
+
+- Supports multiple images per product (optional)
 
 Features:
 
@@ -270,14 +271,13 @@ Optional Enhancements:
 Settings Page:
 
 - Business name
-- Currency symbol
+- Currency symbol (Default: BDT ৳)
 - Default tax
 - Backup location
 - Auto-backup toggle
 - Reset database (danger action)
 
-===================================================== 5. DATABASE DESIGN REQUIREMENTS
-=====================================================
+# ===================================================== 5. DATABASE DESIGN REQUIREMENTS
 
 Use SQLite with relational tables:
 
@@ -297,8 +297,7 @@ Use:
 - Transactions
 - Migrations
 
-===================================================== 6. UI / UX REQUIREMENTS
-=====================================================
+# ===================================================== 6. UI / UX REQUIREMENTS
 
 - Sidebar navigation
 - Pages:
@@ -314,8 +313,7 @@ Use:
 - Responsive window resizing
 - Large buttons and readable fonts
 
-===================================================== 7. NON-FUNCTIONAL REQUIREMENTS
-=====================================================
+# ===================================================== 7. NON-FUNCTIONAL REQUIREMENTS
 
 - Offline-first
 - Fast startup
@@ -324,8 +322,7 @@ Use:
 - Modular and scalable codebase
 - Easy future extension
 
-===================================================== 8. FUTURE FEATURES (DO NOT IMPLEMENT NOW)
-=====================================================
+# ===================================================== 8. FUTURE FEATURES (DO NOT IMPLEMENT NOW)
 
 - User authentication
 - Role-based access
@@ -333,8 +330,7 @@ Use:
 - Barcode scanner support
 - Mobile companion app
 
-===================================================== 9. EXPECTED OUTPUT FROM ANTIGRAVITY
-=====================================================
+# ===================================================== 9. EXPECTED OUTPUT FROM ANTIGRAVITY
 
 Antigravity must:
 
@@ -348,8 +344,7 @@ Antigravity must:
 - Provide clean folder structure
 - Write readable, commented code
 
-===================================================== 10. FINAL INSTRUCTION
-=====================================================
+# ===================================================== 10. FINAL INSTRUCTION
 
 Build "TDC-POS" exactly as specified above.
 Do not skip any module.

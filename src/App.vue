@@ -151,6 +151,12 @@ function logout() {
           <span class="font-medium">Settings</span>
         </RouterLink>
 
+        <div class="nav-section">Assistant</div>
+        <RouterLink to="/chat" class="nav-link" active-class="nav-link-active">
+          <span class="nav-icon">🤖</span>
+          <span class="font-medium">AI Chat</span>
+        </RouterLink>
+
         <!-- Administration -->
         <div v-if="auth.canManageUsers || auth.canViewActivityLog" class="nav-section">System</div>
         <RouterLink v-if="auth.canManageUsers" to="/users" class="nav-link" active-class="nav-link-active">

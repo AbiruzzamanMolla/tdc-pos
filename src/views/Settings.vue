@@ -22,7 +22,8 @@ const settings = reactive({
   store_phone: "",
   store_email: "",
   currency_symbol: "৳",
-  tax_rate: "0"
+  tax_rate: "0",
+  google_ai_key: ""
 });
 
 async function loadSettings() {
@@ -151,18 +152,40 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Save Button Section -->
-        <div class="flex items-center justify-between pt-6 border-t">
-          <div v-if="message" class="text-green-600 font-medium bg-green-50 px-3 py-1 rounded">
-            {{ message }}
-          </div>
-          <div v-else></div> <!-- Spacer -->
+        <!-- AI Settings Section -->
+        <div>
+          <h2 class="text-xl font-bold text-gray-700 mb-6 border-b pb-2 flex items-center gap-2">
+            <span>🤖</span> AI Configuration
+          </h2>
 
-          <button @click="saveSettings" :disabled="loading"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition disabled:opacity-50">
-            {{ loading ? 'Saving...' : 'Save Settings' }}
-          </button>
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Google AI Studio API Key</label>
+            <div class="relative">
+              <input v-model="settings.google_ai_key" type="password"
+                placeholder="Enter your API key (starts with AIza...)"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              Required for the Chat Assistant. Get your key from
+              <a href="https://aistudio.google.com/" target="_blank" class="text-blue-600 hover:underline">Google AI
+                Studio</a>.
+            </p>
+          </div>
+
+          <!-- Save Button Section -->
+          <div class="flex items-center justify-between pt-6 border-t">
+            <div v-if="message" class="text-green-600 font-medium bg-green-50 px-3 py-1 rounded">
+              {{ message }}
+            </div>
+            <div v-else></div> <!-- Spacer -->
+
+            <button @click="saveSettings" :disabled="loading"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition disabled:opacity-50">
+              {{ loading ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
         </div>
+
       </div>
 
     </div>
@@ -195,7 +218,8 @@ onMounted(() => {
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <div>
               <span class="text-gray-800 font-bold block">All Inventory</span>
-              <span class="text-xs text-red-500 font-bold uppercase tracking-wide">Deletes Sales & Purchases too</span>
+              <span class="text-xs text-red-500 font-bold uppercase tracking-wide">Deletes Sales & Purchases
+                too</span>
             </div>
           </label>
           <label

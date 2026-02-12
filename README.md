@@ -24,6 +24,7 @@ TDC-POS is a modern, offline-first Point of Sale (POS) desktop application built
   - PDF export functionality.
 - **Tools**:
   - **Floating Calculator**: Persistent calculator accessible from any screen.
+  - **AI Assistant**: Conversational AI powered by Google Gemini (requires API key).
 - **Database**:
   - **Offline-First**: Uses local SQLite database.
   - **Backup & Restore**: Securely backup and restore your business data.

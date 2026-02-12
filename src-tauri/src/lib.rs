@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod models;
+mod chat;
 
 use db::Database;
 use std::sync::Mutex;
@@ -71,7 +72,12 @@ pub fn run() {
             commands::update_user_role,
             commands::log_activity,
             commands::get_activity_logs,
-            commands::cleanup_database
+            commands::cleanup_database,
+            chat::create_conversation,
+            chat::get_conversations,
+            chat::get_messages,
+            chat::delete_conversation,
+            chat::send_chat_message
         ])
 
 

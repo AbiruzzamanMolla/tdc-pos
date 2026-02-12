@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.3] - 2026-02-12
+
+### Added
+
+- **AI Assistant**: Integrated Google Gemini AI for a full conversational chat experience within the app.
+  - **Chat Interface**: New "AI Chat" view with sidebar for conversation management.
+  - **Context Aware**: Stores chat history locally using SQLite database (conversations and messages tables).
+  - **Configuration**: Secure "Google AI Studio API Key" input in Settings.
+- **Calculator Enhancement**: Added a Backspace (⌫) button to the floating calculator, allowing users to clear digits one by one.
+
 ## [0.17.2] - 2026-02-12
 
 ### Added

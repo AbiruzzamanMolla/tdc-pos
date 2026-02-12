@@ -86,11 +86,12 @@ const percentage = () => {
     displayValue.value = String(val / 100)
 }
 
-const toggleSign = () => {
-    if (displayValue.value === '0') return
-    displayValue.value = displayValue.value.charAt(0) === '-'
-        ? displayValue.value.slice(1)
-        : `-${displayValue.value}`
+const backspace = () => {
+    if (displayValue.value.length === 1 || displayValue.value === 'Error') {
+        displayValue.value = '0'
+    } else {
+        displayValue.value = displayValue.value.slice(0, -1)
+    }
 }
 
 // Warning Logic
@@ -138,7 +139,7 @@ onBeforeUnmount(() => {
                 <div class="grid grid-cols-4 gap-px bg-gray-200 p-px">
                     <!-- Row 1 -->
                     <button @click="clear" class="calc-btn text-gray-600 bg-white hover:bg-gray-50">C</button>
-                    <button @click="toggleSign" class="calc-btn text-gray-600 bg-white hover:bg-gray-50">+/-</button>
+                    <button @click="backspace" class="calc-btn text-gray-600 bg-white hover:bg-gray-50">⌫</button>
                     <button @click="percentage" class="calc-btn text-gray-600 bg-white hover:bg-gray-50">%</button>
                     <button @click="setOperation('/')"
                         class="calc-btn text-blue-600 font-bold bg-blue-50 hover:bg-blue-100">÷</button>

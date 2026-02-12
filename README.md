@@ -14,7 +14,10 @@ TDC-POS is a modern, offline-first Point of Sale (POS) desktop application built
 - **Point of Sale (POS)**:
   - Interactive product grid and cart system.
   - Fast checkout with customer details and discount management.
-- **Purchases**: Record supplier purchases to automatically update inventory.
+- **Procurement (Buying)**:
+  - Record supplier purchases with automatic stock updates.
+  - **Weighted Average Costing**: Automatic calculation of product average cost.
+  - **Landed Cost**: Support for extra charges (shipping, tax) per purchase item.
 - **Reports**:
   - Sales history with profit analysis.
   - Inventory valuation reports.

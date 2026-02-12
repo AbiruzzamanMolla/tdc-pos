@@ -2,6 +2,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import ProductDetailsModal from '../components/ProductDetailsModal.vue';
+
 
 const products = ref([]);
 const searchQuery = ref("");
@@ -20,9 +22,18 @@ const form = ref({
   stock_quantity: 0,
   unit: "pcs",
   tax_percentage: 0,
+  original_price: 0,
+  facebook_link: "",
+  product_link: "",
   images: [],        // raw file paths for saving
   imagesPreviews: [] // base64 data URIs for display
 });
+
+const showViewModal = ref(false);
+const selectedProduct = ref(null);
+
+
+
 
 const filteredProducts = computed(() => {
   if (!searchQuery.value) return products.value;
@@ -91,9 +102,13 @@ async function openModal(product = null) {
       stock_quantity: 0,
       unit: "pcs",
       tax_percentage: 0,
+      original_price: 0,
+      facebook_link: "",
+      product_link: "",
       images: [],
       imagesPreviews: []
     };
+
   }
   showModal.value = true;
 }
@@ -146,11 +161,15 @@ async function saveProduct() {
       stock_quantity: Number(form.value.stock_quantity),
       unit: form.value.unit,
       tax_percentage: Number(form.value.tax_percentage),
+      original_price: Number(form.value.original_price),
+      facebook_link: form.value.facebook_link,
+      product_link: form.value.product_link,
       created_at: form.value.created_at,
       updated_at: form.value.updated_at,
       is_deleted: 0,
       images: null
     };
+
 
     if (isEditing.value) {
       await invoke('update_product', { product: productData, images: form.value.images });
@@ -176,7 +195,21 @@ async function deleteProduct(id) {
   }
 }
 
+function openViewModal(product) {
+  selectedProduct.value = product;
+  showViewModal.value = true;
+}
+
+
+
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  return new Date(dateStr).toLocaleString();
+}
+
 onMounted(() => {
+
   loadProducts();
 });
 </script>
@@ -209,8 +242,11 @@ onMounted(() => {
             <th class="p-3 border-b">Stock</th>
             <th class="p-3 border-b">Buy Price</th>
             <th class="p-3 border-b">Sell Price</th>
+            <th class="p-3 border-b">Buying Cost</th>
+            <th class="p-3 border-b">Profit</th>
             <th class="p-3 border-b text-right">Actions</th>
           </tr>
+
         </thead>
         <tbody class="text-gray-700 text-sm">
           <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-gray-50 border-b last:border-b-0">
@@ -228,12 +264,18 @@ onMounted(() => {
             </td>
             <td class="p-3">{{ currencySymbol }}{{ product.buying_price.toFixed(2) }}</td>
             <td class="p-3">{{ currencySymbol }}{{ product.default_selling_price.toFixed(2) }}</td>
-            <td class="p-3 text-right space-x-1">
+            <td class="p-3">{{ currencySymbol }}{{ (product.buying_price - product.original_price).toFixed(2) }}</td>
+            <td class="p-3 font-bold text-green-600">{{ currencySymbol }}{{ (product.default_selling_price -
+              product.buying_price).toFixed(2) }}</td>
+            <td class="p-3 text-right space-x-1 whitespace-nowrap">
+              <button @click="openViewModal(product)"
+                class="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 px-2 py-1 rounded hover:bg-green-50">View</button>
               <button @click="openModal(product)"
                 class="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Edit</button>
               <button @click="deleteProduct(product.id)"
                 class="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50">Delete</button>
             </td>
+
           </tr>
           <tr v-if="filteredProducts.length === 0">
             <td colspan="8" class="p-8 text-center text-gray-500">No products found.</td>
@@ -282,12 +324,14 @@ onMounted(() => {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Buying Price (Cost)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Buying Price (Average Cost)</label>
               <div class="relative">
                 <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
                 <input v-model.number="form.buying_price" type="number" step="0.01"
-                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+                  class="w-full border border-gray-100 bg-gray-50 rounded-lg pl-8 pr-3 py-2 text-gray-500 text-sm cursor-not-allowed"
+                  disabled>
               </div>
+              <span class="text-[10px] text-blue-600 font-medium">Auto-calculated via Weighted Average</span>
             </div>
 
             <div>
@@ -300,11 +344,12 @@ onMounted(() => {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Initial Stock</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
               <input v-model.number="form.stock_quantity" type="number"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm"
-                :disabled="isEditing">
-              <span v-if="isEditing" class="text-xs text-gray-500">Stock managed via Buying & Selling</span>
+                class="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-gray-500 text-sm cursor-not-allowed"
+                disabled>
+              <span class="text-[10px] text-amber-600 font-medium whitespace-nowrap">Manage stock via Buying / Selling
+                entries</span>
             </div>
 
             <div>
@@ -312,6 +357,30 @@ onMounted(() => {
               <input v-model.number="form.tax_percentage" type="number" step="0.1"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
             </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Original Price</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
+                <input v-model.number="form.original_price" type="number" step="0.01"
+                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+              </div>
+            </div>
+
+            <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Facebook Link (Optional)</label>
+                <input v-model="form.facebook_link" type="url" placeholder="https://facebook.com/..."
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Link (Optional)</label>
+                <input v-model="form.product_link" type="url" placeholder="https://example.com/product/..."
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+              </div>
+            </div>
+
 
             <!-- Image Upload Section -->
             <div class="sm:col-span-2 border-t pt-3 mt-1">
@@ -353,5 +422,9 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- View Details Modal Component -->
+    <ProductDetailsModal :show="showViewModal" :product="selectedProduct" :currency-symbol="currencySymbol"
+      @close="showViewModal = false" />
   </div>
 </template>

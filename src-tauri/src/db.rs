@@ -33,6 +33,9 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             stock_quantity REAL DEFAULT 0,
             unit TEXT,
             tax_percentage REAL DEFAULT 0,
+            original_price REAL DEFAULT 0,
+            facebook_link TEXT,
+            product_link TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             is_deleted INTEGER DEFAULT 0
@@ -121,6 +124,45 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
         WHERE (SELECT COUNT(*) FROM users) = 0;
         "
     )?;
+
+    {
+        // Migrations for existing products table - check if columns exist first
+        let mut stmt = conn.prepare("PRAGMA table_info(products)")?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+        let mut current_columns = std::collections::HashSet::new();
+        for col_res in rows {
+            current_columns.insert(col_res?);
+        }
+
+        if !current_columns.contains("original_price") {
+            conn.execute("ALTER TABLE products ADD COLUMN original_price REAL DEFAULT 0", [])?;
+        }
+        if !current_columns.contains("facebook_link") {
+            conn.execute("ALTER TABLE products ADD COLUMN facebook_link TEXT", [])?;
+        }
+        if !current_columns.contains("product_link") {
+            conn.execute("ALTER TABLE products ADD COLUMN product_link TEXT", [])?;
+        }
+    }
+
+    {
+        // Migrations for purchase_items
+        let mut stmt = conn.prepare("PRAGMA table_info(purchase_items)")?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+        let mut current_columns = std::collections::HashSet::new();
+        for col_res in rows {
+            current_columns.insert(col_res?);
+        }
+
+        if !current_columns.contains("extra_charge") {
+            conn.execute("ALTER TABLE purchase_items ADD COLUMN extra_charge REAL DEFAULT 0", [])?;
+        }
+        if !current_columns.contains("purchase_unit_cost") {
+            conn.execute("ALTER TABLE purchase_items ADD COLUMN purchase_unit_cost REAL DEFAULT 0", [])?;
+        }
+    }
+
+
     
     Ok(conn)
 }

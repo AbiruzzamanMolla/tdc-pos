@@ -1,6 +1,71 @@
 # Changelog
 
-## [0.5.0] - 2026-02-11
+## [0.11.0] - 2024-05-24
+
+### Added
+
+- **Weighted Average Costing**: Implemented automatic inventory costing method for precise financial tracking.
+- **Landed Cost Calculation**: New `Extra Charge` field in Procurement to include shipping, customs, or other additional costs.
+- **Procurement Redesign**:
+  - Removed manual `Buying Price` input; the system now calculates it based on purchase history.
+  - Automatically calculates `Purchase Unit Cost` (Landed Cost) for every item.
+  - Comprehensive history view with landed cost and extra charge breakdown.
+- **Product Safety**: Disabled manual editing of `Buying Price` and `Stock Quantity` in the product manager to preserve audit integrity.
+
+### Changed
+
+- Updated `Buying` (Procurement) page UI with advanced analytics and calculations.
+- Modified `ProductPurchaseHistory` and `StockHistory` to include landed cost data.
+- Database schema updated to store financial metadata for purchase items.
+
+## [0.10.0] - 2024-05-23
+
+### Added
+
+- Created `ProductDetailsModal` as a reusable component for consistent product information display.
+- Integrated product details view into Buying and Selling pages via info icons on product cards.
+- Enabled stock movement history across all product-related views.
+
+### Changed
+
+- Refactored `Products.vue` and `Stocks.vue` to use the new shared `ProductDetailsModal`.
+- Improved UI consistency for product information modals.
+
+## [0.9.0] - 2026-02-12
+
+### Added
+
+- **Product Visuals**: Show product images in Buying, Selling, and Stock List pages.
+- **Cart Enhancements**: Added small item thumbnails to the Buying and Selling cart lists for better identification.
+
+## [0.8.0] - 2026-02-12
+
+### Added
+
+- **Stock Movement History**: Added detailed In/Out history to the Product Details modal.
+- **Unified Inventory Tracking**: Track both purchases (IN) and sales (OUT) in a single historical view.
+
+## [0.7.0] - 2026-02-12
+
+### Added
+
+- **Stock Purchase History**: Added a "Details" view in the Stock List page to see all purchase records (Date, Supplier, Invoice, Qty, Price) for any specific product.
+- **Improved Stock Visibility**: Added an "Actions" column to the available stock table.
+
+## [0.6.0] - 2026-02-12
+
+### Added
+
+- **New Product Fields**: Added `Original Price`, `Facebook Link` (optional), and `Product Link` (optional) to product management.
+- **Auto-Calculations**:
+  - **Buying Cost**: Automatically calculated as `Buying Price - Original Price`.
+  - **Expected Profit**: Automatically calculated as `Selling Price - Buying Price`.
+- **Product Details View**: Comprehensive modal to view full product details, metrics, and clickable social/web links.
+
+### Changed
+
+- **Product Table**: Added columns for `Buying Cost` and `Profit` directly in the list view for quick reference.
+- **Product Form**: Updated layout to include the new fields.
 
 ### Added
 

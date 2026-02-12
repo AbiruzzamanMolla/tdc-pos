@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 
 const viewMode = ref('pos');
 const products = ref([]);
@@ -13,6 +14,8 @@ const checkoutModal = ref(false);
 const showDetailsModal = ref(false);
 const selectedOrder = ref(null);
 const currencySymbol = ref('৳');
+const showProductDetails = ref(false);
+const selectedProductDetails = ref(null);
 
 const form = reactive({
   customer_name: "Guest",
@@ -63,6 +66,16 @@ async function loadProducts() {
       invoke('get_products'),
       invoke('get_settings')
     ]);
+    // Load first image preview for each product
+    for (const p of prods) {
+      if (p.images && p.images.length > 0) {
+        try {
+          p._thumb = await invoke('read_image_base64', { path: p.images[0] });
+        } catch { p._thumb = null; }
+      } else {
+        p._thumb = null;
+      }
+    }
     products.value = prods;
     if (settingsData && settingsData.currency_symbol) {
       currencySymbol.value = settingsData.currency_symbol;
@@ -110,6 +123,11 @@ async function deleteOrder(order) {
   }
 }
 
+function openDetails(product) {
+  selectedProductDetails.value = product;
+  showProductDetails.value = true;
+}
+
 function addToCart(product) {
   if (product.stock_quantity <= 0) {
     alert("Out of stock!");
@@ -128,6 +146,7 @@ function addToCart(product) {
     cart.value.push({
       product_id: product.id,
       product_name: product.product_name,
+      _thumb: product._thumb,
       quantity: 1,
       selling_price: product.default_selling_price,
       default_selling_price: product.default_selling_price,
@@ -249,22 +268,38 @@ onMounted(() => {
         </div>
 
         <div class="p-3 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto content-start flex-1">
-          <div v-for="product in filteredProducts" :key="product.id" @click="addToCart(product)"
-            class="border border-gray-200 rounded-xl p-3 cursor-pointer hover:shadow-md transition-shadow bg-gray-50 hover:bg-white active:scale-95 transform transition-transform"
-            :class="{ 'opacity-50 pointer-events-none': product.stock_quantity <= 0 }">
-            <div
-              class="h-16 bg-gray-200 rounded-lg mb-2 flex items-center justify-center text-gray-400 text-2xl font-bold">
-              {{ product.product_name.charAt(0) }}
+          <div v-for="product in filteredProducts" :key="product.id" class="relative group/card">
+            <div @click="addToCart(product)"
+              class="border border-gray-200 rounded-xl p-3 cursor-pointer hover:shadow-md transition-shadow bg-gray-50 hover:bg-white active:scale-95 transform transition-transform h-full"
+              :class="{ 'opacity-50 pointer-events-none': product.stock_quantity <= 0 }">
+              <div
+                class="h-16 bg-gray-200 rounded-lg mb-2 flex items-center justify-center text-gray-400 text-2xl font-bold overflow-hidden border border-gray-100">
+                <img v-if="product._thumb" :src="product._thumb" class="w-full h-full object-cover">
+                <span v-else>{{ product.product_name.charAt(0) }}</span>
+              </div>
+              <h3 class="font-bold text-gray-800 text-xs truncate">{{ product.product_name }}</h3>
+              <div class="flex justify-between items-center mt-1">
+                <span class="text-blue-600 font-bold text-sm">{{ currencySymbol }}{{
+                  product.default_selling_price.toFixed(2) }}</span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full"
+                  :class="product.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                  {{ product.stock_quantity }}
+                </span>
+              </div>
             </div>
-            <h3 class="font-bold text-gray-800 text-xs truncate">{{ product.product_name }}</h3>
-            <div class="flex justify-between items-center mt-1">
-              <span class="text-blue-600 font-bold text-sm">{{ currencySymbol }}{{
-                product.default_selling_price.toFixed(2) }}</span>
-              <span class="text-xs px-1.5 py-0.5 rounded-full"
-                :class="product.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                {{ product.stock_quantity }}
-              </span>
-            </div>
+            <!-- Details Button -->
+            <button @click.stop="openDetails(product)"
+              class="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur rounded-full shadow border border-gray-100 flex items-center justify-center text-blue-600 opacity-0 group-hover/card:opacity-100 hover:bg-blue-600 hover:text-white transition-all z-10"
+              title="View Product Details">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </div>
+          <div v-if="filteredProducts.length === 0" class="col-span-full text-center text-gray-400 py-8">
+            No products found.
           </div>
         </div>
       </div>
@@ -277,7 +312,12 @@ onMounted(() => {
         <div class="flex-1 overflow-y-auto p-3 space-y-3">
           <div v-for="(item, index) in cart" :key="item.product_id" class="border border-gray-100 rounded-lg p-3 group">
             <div class="flex justify-between items-start">
-              <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <div
+                  class="w-8 h-8 rounded bg-gray-50 border border-gray-100 flex-shrink-0 flex items-center justify-center text-[10px] text-gray-400 font-bold overflow-hidden">
+                  <img v-if="item._thumb" :src="item._thumb" class="w-full h-full object-cover">
+                  <span v-else>{{ item.product_name.charAt(0) }}</span>
+                </div>
                 <div class="font-medium text-gray-800 text-sm truncate">{{ item.product_name }}</div>
               </div>
               <button @click="removeFromCart(index)"
@@ -498,5 +538,9 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Product Details Modal -->
+    <ProductDetailsModal :show="showProductDetails" :product="selectedProductDetails" :currency-symbol="currencySymbol"
+      @close="showProductDetails = false" />
   </div>
 </template>

@@ -12,7 +12,11 @@ pub struct Product {
     pub stock_quantity: f64,
     pub unit: Option<String>,
     pub tax_percentage: f64,
+    pub original_price: f64,
+    pub facebook_link: Option<String>,
+    pub product_link: Option<String>,
     pub created_at: Option<String>,
+
     pub updated_at: Option<String>,
     pub is_deleted: i32,
     pub images: Option<Vec<String>>, // Not a DB column, populated manually
@@ -44,8 +48,10 @@ pub struct PurchaseItem {
     pub purchase_id: Option<i64>,
     pub product_id: i64,
     pub quantity: f64,
-    pub buying_price: f64,
-    pub subtotal: f64,
+    pub buying_price: f64, // acts as unit_price
+    pub extra_charge: f64,
+    pub subtotal: f64,      // acts as total_cost (qty * unit_price + extra_charge)
+    pub purchase_unit_cost: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -56,7 +62,9 @@ pub struct PurchaseItemDetail {
     pub product_name: String,
     pub quantity: f64,
     pub buying_price: f64,
+    pub extra_charge: f64,
     pub subtotal: f64,
+    pub purchase_unit_cost: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,4 +153,24 @@ pub struct BackupInfo {
     pub path: String,
     pub size: u64,
     pub created_at: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProductPurchaseHistory {
+    pub date: String,
+    pub supplier_name: Option<String>,
+    pub invoice_number: Option<String>,
+    pub quantity: f64,
+    pub buying_price: f64,
+    pub extra_charge: f64,
+    pub subtotal: f64,
+    pub purchase_unit_cost: f64,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StockMovement {
+    pub date: String,
+    pub movement_type: String, // "IN" or "OUT"
+    pub entity_name: Option<String>, // Supplier or Customer
+    pub reference: Option<String>, // Invoice or Order ID
+    pub quantity: f64,
+    pub price: f64,
 }

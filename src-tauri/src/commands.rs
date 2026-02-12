@@ -11,14 +11,15 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
     // Fetch products with the first image if available
     let mut stmt = conn.prepare("
         SELECT p.id, p.product_name, p.product_code, p.category, p.brand, p.buying_price, p.default_selling_price, 
-               p.stock_quantity, p.unit, p.tax_percentage, p.created_at, p.updated_at, p.is_deleted,
+               p.stock_quantity, p.unit, p.tax_percentage, p.original_price, p.facebook_link, p.product_link,
+               p.created_at, p.updated_at, p.is_deleted,
                (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as image_path
         FROM products p
         WHERE p.is_deleted = 0
     ").map_err(|e| e.to_string())?;
     
     let products_iter = stmt.query_map([], |row| {
-        let image_path: Option<String> = row.get(13)?;
+        let image_path: Option<String> = row.get(16)?;
         let images = image_path.map(|path| vec![path]);
 
         Ok(Product {
@@ -32,9 +33,12 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
             stock_quantity: row.get(7)?,
             unit: row.get(8)?,
             tax_percentage: row.get(9)?,
-            created_at: row.get(10)?,
-            updated_at: row.get(11)?,
-            is_deleted: row.get(12)?,
+            original_price: row.get(10)?,
+            facebook_link: row.get(11)?,
+            product_link: row.get(12)?,
+            created_at: row.get(13)?,
+            updated_at: row.get(14)?,
+            is_deleted: row.get(15)?,
             images,
         })
     }).map_err(|e| e.to_string())?;
@@ -156,7 +160,7 @@ pub fn create_product(product: Product, images: Vec<String>, db: State<Database>
    let tx = conn.transaction().map_err(|e| e.to_string())?;
    
    tx.execute(
-       "INSERT INTO products (product_name, product_code, category, brand, buying_price, default_selling_price, stock_quantity, unit, tax_percentage) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+       "INSERT INTO products (product_name, product_code, category, brand, buying_price, default_selling_price, stock_quantity, unit, tax_percentage, original_price, facebook_link, product_link) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
        params![
            product.product_name,
            product.product_code,
@@ -166,7 +170,10 @@ pub fn create_product(product: Product, images: Vec<String>, db: State<Database>
            product.default_selling_price,
            product.stock_quantity,
            product.unit,
-           product.tax_percentage
+           product.tax_percentage,
+           product.original_price,
+           product.facebook_link,
+           product.product_link
        ],
    ).map_err(|e| e.to_string())?;
    
@@ -197,7 +204,7 @@ pub fn update_product(product: Product, images: Vec<String>, db: State<Database>
     
     // Update Product Details
     tx.execute(
-        "UPDATE products SET product_name = ?1, product_code = ?2, category = ?3, brand = ?4, buying_price = ?5, default_selling_price = ?6, stock_quantity = ?7, unit = ?8, tax_percentage = ?9, updated_at = CURRENT_TIMESTAMP WHERE id = ?10",
+        "UPDATE products SET product_name = ?1, product_code = ?2, category = ?3, brand = ?4, buying_price = ?5, default_selling_price = ?6, stock_quantity = ?7, unit = ?8, tax_percentage = ?9, original_price = ?10, facebook_link = ?11, product_link = ?12, updated_at = CURRENT_TIMESTAMP WHERE id = ?13",
         params![
             product.product_name,
             product.product_code,
@@ -208,6 +215,9 @@ pub fn update_product(product: Product, images: Vec<String>, db: State<Database>
             product.stock_quantity,
             product.unit,
             product.tax_percentage,
+            product.original_price,
+            product.facebook_link,
+            product.product_link,
             product.id
         ],
     ).map_err(|e| e.to_string())?;
@@ -273,34 +283,47 @@ pub fn create_purchase(purchase: Purchase, items: Vec<PurchaseItem>, db: State<D
     // 2. Insert Items and Update Product
     for item in items {
         tx.execute(
-            "INSERT INTO purchase_items (purchase_id, product_id, quantity, buying_price, subtotal) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO purchase_items (purchase_id, product_id, quantity, buying_price, extra_charge, subtotal, purchase_unit_cost) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 purchase_id,
                 item.product_id,
                 item.quantity,
                 item.buying_price,
-                item.subtotal
+                item.extra_charge,
+                item.subtotal,
+                item.purchase_unit_cost
             ],
         ).map_err(|e| e.to_string())?;
 
-        // 3. Update Product Stock and Average Cost
-        // Fetch current stock and price
-        let (current_stock, current_price): (f64, f64) = tx.query_row(
+        // 3. Update Product Stock and Average Cost using Weighted Average
+        // old_quantity = existing product stock quantity
+        // old_average_cost = existing product buying price
+        let (old_quantity, old_average_cost): (f64, f64) = tx.query_row(
             "SELECT stock_quantity, buying_price FROM products WHERE id = ?1",
             params![item.product_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(|e| e.to_string())?;
         
-        let new_stock = current_stock + item.quantity;
-        let new_price = if new_stock > 0.0 {
-            ((current_stock * current_price) + (item.quantity * item.buying_price)) / new_stock
+        // old_total_value = old_quantity * old_average_cost
+        // new_total_value = (quantity * unit_price) + extra_charge
+        let old_total_value = old_quantity * old_average_cost;
+        let new_total_value = (item.quantity * item.buying_price) + item.extra_charge;
+
+        // updated_total_quantity = old_quantity + quantity
+        // updated_total_value = old_total_value + new_total_value
+        let updated_total_quantity = old_quantity + item.quantity;
+        let updated_total_value = old_total_value + new_total_value;
+
+        // new_average_buying_price = updated_total_value / updated_total_quantity
+        let new_average_buying_price = if updated_total_quantity > 0.0 {
+            updated_total_value / updated_total_quantity
         } else {
-            item.buying_price
+            item.purchase_unit_cost // Fallback if somehow quantity is 0
         };
         
         tx.execute(
             "UPDATE products SET stock_quantity = ?1, buying_price = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
-            params![new_stock, new_price, item.product_id],
+            params![updated_total_quantity, new_average_buying_price, item.product_id],
         ).map_err(|e| e.to_string())?;
     }
     
@@ -718,7 +741,7 @@ pub fn get_purchase_items(purchase_id: i64, db: State<Database>) -> Result<Vec<c
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare("
-        SELECT pi.id, pi.purchase_id, pi.product_id, p.product_name, pi.quantity, pi.buying_price, pi.subtotal 
+        SELECT pi.id, pi.purchase_id, pi.product_id, p.product_name, pi.quantity, pi.buying_price, pi.extra_charge, pi.subtotal, pi.purchase_unit_cost
         FROM purchase_items pi
         JOIN products p ON pi.product_id = p.id
         WHERE pi.purchase_id = ?1
@@ -732,7 +755,9 @@ pub fn get_purchase_items(purchase_id: i64, db: State<Database>) -> Result<Vec<c
             product_name: row.get(3)?,
             quantity: row.get(4)?,
             buying_price: row.get(5)?,
-            subtotal: row.get(6)?,
+            extra_charge: row.get(6)?,
+            subtotal: row.get(7)?,
+            purchase_unit_cost: row.get(8)?,
         })
     }).map_err(|e| e.to_string())?;
     
@@ -912,4 +937,93 @@ pub fn delete_user(id: i64, db: State<Database>) -> Result<(), String> {
     conn.execute("DELETE FROM users WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+#[tauri::command]
+pub fn get_product_purchase_history(product_id: i64, db: State<Database>) -> Result<Vec<crate::models::ProductPurchaseHistory>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let mut stmt = conn.prepare("
+        SELECT p.purchase_date, p.supplier_name, p.invoice_number, pi.quantity, pi.buying_price, pi.extra_charge, pi.subtotal, pi.purchase_unit_cost
+        FROM purchase_items pi
+        JOIN purchases p ON pi.purchase_id = p.purchase_id
+        WHERE pi.product_id = ?1
+        ORDER BY p.purchase_date DESC
+    ").map_err(|e| e.to_string())?;
+    
+    let history_iter = stmt.query_map(params![product_id], |row| {
+        Ok(crate::models::ProductPurchaseHistory {
+            date: row.get(0)?,
+            supplier_name: row.get(1)?,
+            invoice_number: row.get(2)?,
+            quantity: row.get(3)?,
+            buying_price: row.get(4)?,
+            extra_charge: row.get(5)?,
+            subtotal: row.get(6)?,
+            purchase_unit_cost: row.get(7)?,
+        })
+    }).map_err(|e| e.to_string())?;
+    
+    let mut history = Vec::new();
+    for item in history_iter {
+        history.push(item.map_err(|e| e.to_string())?);
+    }
+    
+    Ok(history)
+}
+#[tauri::command]
+pub fn get_product_stock_history(product_id: i64, db: State<Database>) -> Result<Vec<crate::models::StockMovement>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let mut movements = Vec::new();
+
+    // 1. Fetch Purchases (IN)
+    let mut stmt_in = conn.prepare("
+        SELECT p.purchase_date, p.supplier_name, p.invoice_number, pi.quantity, pi.purchase_unit_cost
+        FROM purchase_items pi
+        JOIN purchases p ON pi.purchase_id = p.purchase_id
+        WHERE pi.product_id = ?1
+    ").map_err(|e| e.to_string())?;
+    
+    let in_rows = stmt_in.query_map(params![product_id], |row| {
+        Ok(crate::models::StockMovement {
+            date: row.get(0)?,
+            movement_type: "IN".to_string(),
+            entity_name: row.get(1)?,
+            reference: row.get(2)?,
+            quantity: row.get(3)?,
+            price: row.get(4)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    for m in in_rows {
+        movements.push(m.map_err(|e| e.to_string())?);
+    }
+
+    // 2. Fetch Sales (OUT)
+    let mut stmt_out = conn.prepare("
+        SELECT o.order_date, o.customer_name, o.order_id, oi.quantity, oi.selling_price
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = ?1
+    ").map_err(|e| e.to_string())?;
+    
+    let out_rows = stmt_out.query_map(params![product_id], |row| {
+        Ok(crate::models::StockMovement {
+            date: row.get(0)?,
+            movement_type: "OUT".to_string(),
+            entity_name: row.get(1)?,
+            reference: Some(row.get::<_, i64>(2)?.to_string()),
+            quantity: row.get(3)?,
+            price: row.get(4)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    for m in out_rows {
+        movements.push(m.map_err(|e| e.to_string())?);
+    }
+
+    // Sort by date DESC
+    movements.sort_by(|a, b| b.date.cmp(&a.date));
+
+    Ok(movements)
 }

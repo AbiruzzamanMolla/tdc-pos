@@ -62,8 +62,12 @@ pub fn run() {
             commands::delete_user,
             commands::list_backups,
             commands::prune_backups,
-            commands::check_and_auto_backup
+            commands::check_and_auto_backup,
+            commands::get_product_purchase_history,
+            commands::get_product_stock_history
         ])
+
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

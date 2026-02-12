@@ -67,11 +67,14 @@ Product Table Fields:
 - product_code (unique / SKU / barcode)
 - category
 - brand
-- buying_price (real cost price)
+- buying_price (Weighted Average Buying Price / Landed Cost)
 - default_selling_price
 - stock_quantity
 - unit (pcs, kg, liter, etc.)
 - tax_percentage (optional)
+- original_price
+- facebook_link
+- product_link
 - created_at
 - updated_at
 - is_deleted (soft delete)
@@ -86,6 +89,7 @@ Features:
 - Edit product
 - Soft delete product
 - View product list
+- View product details (with auto-calculated Buying Cost and Profit)
 - Search by name or product code
 - Low stock warning
 - Automatic stock updates after purchase/sale
@@ -111,14 +115,17 @@ Purchase Items Table:
 - purchase_id
 - product_id
 - quantity
-- buying_price
-- subtotal
+- buying_price (Unit Price before extra charges)
+- extra_charge (Shipping, customs, etc.)
+- purchase_unit_cost (Landed cost per unit: ((qty \* price) + extra) / qty)
+- subtotal (Total cost for this item: (qty \* price) + extra)
 
 Purchase Logic:
 
 - Purchasing increases product stock
-- Buying price updates average cost (preferred)
-- Purchase history must be preserved
+- Buying price updates weighted average cost: `(OldTotalValue + NewPurchaseValue) / NewTotalQuantity`
+- Landed cost (including extra charges) is stored per purchase item
+- Purchase history must be preserved for audit and inventory valuation
 - Purchase reports must be generated
 
 ---
@@ -324,9 +331,15 @@ Use:
 
 # ===================================================== 8. FUTURE FEATURES (IMPLEMENT NOW)
 
-- add a new stock page will all the available stock products in one apge with qty and minimal details.
-- User authentication
+- add a new stock page will all the available stock products in one apge with qty and minimal details. (Implemented v0.4.0)
+- **Stock Purchase History**: View detailed purchase records for each item in the stock list. (Implemented v0.7.0)
+- **Unified Stock Movement History**: View both IN (purchases) and OUT (sales) movements in product details. (Implemented v0.8.0)
+- **Product Visual Identification**: Images must be displayed in selection grids and checkout carts to prevent error.
+- **Integrated Product Details**: Detailed product information (specifications, link, history) must be accessible from any context where a product is listed (Buying, Selling, Inventory). (Implemented v0.9.0)
+- User authentication (Implemented v0.4.0)
+
 - Role-based access
+- **Weighted Average Inventory Costing**: Precise cost tracking with Landed Cost (Extra Charges) support in procurement. (Implemented v0.11.0)
 - Cloud sync
 - Barcode scanner support
 - Mobile companion app

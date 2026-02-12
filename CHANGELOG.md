@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.14.0] - 2026-02-12
+
+### Added
+
+- **Centralized Theme System**: Introduced a Pinia-based theme engine (`stores/theme.js`) with 6 modern color themes:
+  - 🌙 **Midnight** — Classic dark sidebar with blue accents (default)
+  - 🌊 **Ocean** — Deep navy with cyan highlights
+  - 🌿 **Emerald** — Rich forest green with emerald accents
+  - 🌅 **Sunset** — Warm stone with orange accents
+  - 👑 **Royal** — Deep indigo with purple accents
+  - 🌹 **Rose** — Dark navy with rose-pink accents
+- **Theme Picker in Sidebar**: A "🎨 Theme" button in the sidebar footer toggles a compact 3×2 grid of theme swatches. Selecting a theme instantly applies it and persists the choice in localStorage.
+- **CSS Custom Properties**: All theme colors are injected as CSS custom variables (`--t-*`), enabling any component to reference the active theme tokens.
+
+### Changed
+
+- **App.vue**: Completely rebuilt to use CSS classes driven by custom properties instead of hardcoded Tailwind colors. Sidebar, nav links, section headers, logout button, and footer all respond to theme changes in real-time.
+
 ## [0.13.0] - 2026-02-12
 
 ### Added

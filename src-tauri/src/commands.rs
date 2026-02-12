@@ -1139,3 +1139,48 @@ pub fn get_activity_logs(limit: i64, offset: i64, db: State<Database>) -> Result
     }
     Ok(logs)
 }
+
+#[tauri::command]
+pub fn cleanup_database(
+    clean_sales: bool, 
+    clean_purchases: bool, 
+    clean_products: bool, 
+    clean_logs: bool, 
+    db: State<Database>
+) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    if clean_products {
+        // If products are cleared, ALL history referencing them must go.
+        // This is a hard reset of inventory and transactions.
+        tx.execute("DELETE FROM product_images", []).map_err(|e| e.to_string())?;
+        
+        // Wipe all transaction tables completely
+        tx.execute("DELETE FROM order_items", []).map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM orders", []).map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM purchase_items", []).map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM purchases", []).map_err(|e| e.to_string())?;
+        
+        // Finally products
+        tx.execute("DELETE FROM products", []).map_err(|e| e.to_string())?;
+    } else {
+        // If NOT cleaning products, check individual flags
+        if clean_sales {
+            tx.execute("DELETE FROM order_items", []).map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM orders", []).map_err(|e| e.to_string())?;
+        }
+    
+        if clean_purchases {
+            tx.execute("DELETE FROM purchase_items", []).map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM purchases", []).map_err(|e| e.to_string())?;
+        }
+    }
+
+    if clean_logs {
+        tx.execute("DELETE FROM activity_logs", []).map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}

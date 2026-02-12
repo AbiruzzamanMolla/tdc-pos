@@ -70,7 +70,8 @@ pub fn run() {
             commands::change_password,
             commands::update_user_role,
             commands::log_activity,
-            commands::get_activity_logs
+            commands::get_activity_logs,
+            commands::cleanup_database
         ])
 
 

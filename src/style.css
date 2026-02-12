@@ -99,3 +99,55 @@ main.bg-gray-50,
 .bg-gray-100 {
   background-color: var(--t-main-bg, #f9fafb) !important;
 }
+
+/* --- Borders --- */
+.border-gray-100,
+.border-gray-200,
+.border-gray-300 {
+  border-color: var(--t-main-card-border, #f3f4f6) !important;
+}
+
+/* --- Placeholders --- */
+::placeholder {
+  color: var(--t-main-muted, #9ca3af) !important;
+  opacity: 0.7;
+}
+
+/* --- Alert/Cleanup variants in Dark Mode --- */
+/* We need to ensure red backgrounds aren't too bright in dark mode if we want a true dark theme */
+/* But since these are utility classes, maybe we just accept them or dampen them */
+.bg-red-50 {
+  background-color: color-mix(
+    in srgb,
+    var(--t-main-bg),
+    #fee2e2 10%
+  ) !important;
+  /* Use a mix of main bg and red to adapt to dark/light */
+  border-color: color-mix(
+    in srgb,
+    var(--t-main-card-border),
+    #fca5a5 20%
+  ) !important;
+}
+.bg-green-50 {
+  background-color: color-mix(
+    in srgb,
+    var(--t-main-bg),
+    #dcfce7 10%
+  ) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--t-main-card-border),
+    #86efac 20%
+  ) !important;
+}
+
+/* Ensure text contrast in alerts */
+.text-red-600,
+.text-red-700 {
+  color: color-mix(in srgb, var(--t-main-text), #ef4444 80%) !important;
+}
+.text-green-600,
+.text-green-700 {
+  color: color-mix(in srgb, var(--t-main-text), #22c55e 80%) !important;
+}

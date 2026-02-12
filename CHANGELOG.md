@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.0] - 2026-02-12
+
+### Added
+
+- **Database Cleanup System**: Super Admins can now selectively wipe Sales History, Purchase History, Activity Logs, or All Inventory from the Settings page. This action is protected by a random confirmation code.
+- **Improved Dark Mode Support**: Additional global CSS overrides for `border-gray-*`, `::placeholder`, and alert colors (`bg-red-50`, `text-red-700`) to ensure better readability and consistency in dark mode.
+
+### Fixed
+
+- **Dark Theme Contrast**: Fixed issues where borders and specific background utilities (like in the cleanup or backup sections) were remaining light/white in dark mode.
+
 ## [0.15.0] - 2026-02-12
 
 ### Added

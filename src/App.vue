@@ -5,6 +5,7 @@ import { useThemeStore } from './stores/theme'
 import { computed, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { APP_VERSION } from './version'
+import FloatingCalculator from './components/FloatingCalculator.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -216,6 +217,7 @@ function logout() {
         <RouterView />
       </div>
     </main>
+    <FloatingCalculator />
   </div>
 </template>
 

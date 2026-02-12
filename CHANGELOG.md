@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.2] - 2026-02-12
+
+### Added
+
+- **Floating Calculator**: A persistent, floating calculator widget accessible from all pages.
+  - Supports standard arithmetic operations (+, -, \*, /) and percentage.
+  - Keeps calculation state while navigating between pages.
+  - Warns the user before closing the application or reloading if a calculation is in progress (input is filled).
+  - Can be toggled via a floating action button in the bottom-right corner.
+
 ## [0.17.1] - 2026-02-12
 
 ### Fixed

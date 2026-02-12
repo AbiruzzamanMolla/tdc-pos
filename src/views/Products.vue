@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
+import { logActivity } from '../utils/activityLogger';
 
 
 const products = ref([]);
@@ -182,8 +183,10 @@ async function saveProduct() {
 
     if (isEditing.value) {
       await invoke('update_product', { product: productData, images: form.value.images });
+      await logActivity('UPDATE', 'Product', productData.id, `Updated product: ${productData.product_name}`);
     } else {
       await invoke('create_product', { product: productData, images: form.value.images });
+      await logActivity('CREATE', 'Product', null, `Created product: ${productData.product_name}`);
     }
 
     closeModal();
@@ -198,6 +201,7 @@ async function deleteProduct(id) {
   if (!confirm("Are you sure you want to delete this product?")) return;
   try {
     await invoke('delete_product', { id });
+    await logActivity('DELETE', 'Product', id, `Deleted product #${id}`);
     loadProducts();
   } catch (error) {
     console.error("Failed to delete product:", error);
@@ -371,7 +375,7 @@ onMounted(() => {
                   disabled>
               </div>
               <span class="text-[10px] text-blue-600 font-medium italic">Buy Price + {{ form.profit_percentage
-                }}%</span>
+              }}%</span>
             </div>
 
             <div>

@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import { APP_VERSION } from '../version';
+import { logActivity } from '../utils/activityLogger';
 
 const username = ref('');
 const password = ref('');
@@ -38,6 +39,7 @@ async function handleLogin() {
     try {
         const user = await invoke('login', { username: username.value, password: password.value });
         auth.setUser(user);
+        await logActivity('LOGIN', 'System', user.id, `User ${user.username} logged in`);
         router.push('/');
     } catch (err) {
         error.value = err.toString();
@@ -66,6 +68,7 @@ async function handleSetup() {
     try {
         const user = await invoke('setup_admin', { username: username.value, password: password.value });
         auth.setUser(user);
+        await logActivity('CREATE', 'System', user.id, `Initial setup: Super Admin "${user.username}" created`);
         router.push('/');
     } catch (err) {
         error.value = err.toString();

@@ -10,6 +10,7 @@ import Backup from '../views/Backup.vue'
 import Settings from '../views/Settings.vue'
 import Login from '../views/Login.vue'
 import Users from '../views/Users.vue'
+import ActivityLog from '../views/ActivityLog.vue'
 
 const routes = [
   { path: '/login', component: Login, name: 'Login', meta: { public: true } },
@@ -22,6 +23,7 @@ const routes = [
   { path: '/backup', component: Backup, name: 'Backup', meta: { permission: 'canManageBackup' } },
   { path: '/settings', component: Settings, name: 'Settings', meta: { permission: 'canManageSettings' } },
   { path: '/users', component: Users, name: 'Users', meta: { permission: 'canManageUsers' } },
+  { path: '/activity-log', component: ActivityLog, name: 'ActivityLog', meta: { permission: 'canViewActivityLog' } },
 ]
 
 const router = createRouter({

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import { logActivity } from '../utils/activityLogger';
 
 const loading = ref(false);
 const statusMessage = ref('');
@@ -93,6 +94,7 @@ async function runManualBackup() {
         });
       }
       await loadBackups();
+      await logActivity('BACKUP', 'Backup', null, `Manual backup created: ${defaultName}`);
       showStatus('Backup created successfully!');
     }
   } catch (error) {
@@ -108,6 +110,7 @@ async function restoreBackup(path) {
   try {
     loading.value = true;
     await invoke('restore_db', { sourcePath: path });
+    await logActivity('RESTORE', 'Backup', null, `Database restored from: ${path}`);
     showStatus('Database restored! Please restart the application.');
   } catch (error) {
     showStatus('Restore failed: ' + error, 'error');
@@ -257,7 +260,7 @@ onMounted(loadSettings);
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <span class="text-lg" :class="index === 0 ? 'animate-pulse' : ''">{{ index === 0 ? '🟢' : '💾'
-                      }}</span>
+                    }}</span>
                     <div>
                       <p class="text-sm font-bold text-gray-700">{{ b.name }}</p>
                       <p class="text-[10px] text-gray-400 font-mono mt-0.5">{{ b.created_at }}</p>

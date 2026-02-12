@@ -99,10 +99,14 @@ onMounted(async () => {
         </RouterLink>
 
         <!-- Administration -->
-        <div v-if="auth.canManageUsers" class="nav-section">System</div>
+        <div v-if="auth.canManageUsers || auth.canViewActivityLog" class="nav-section">System</div>
         <RouterLink v-if="auth.canManageUsers" to="/users" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">U</span>
           <span class="font-medium">Users</span>
+        </RouterLink>
+        <RouterLink v-if="auth.canViewActivityLog" to="/activity-log" class="nav-link" active-class="nav-link-active">
+          <span class="nav-icon">A</span>
+          <span class="font-medium">Activity Log</span>
         </RouterLink>
       </nav>
 

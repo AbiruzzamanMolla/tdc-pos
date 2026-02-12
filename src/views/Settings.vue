@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { logActivity } from '../utils/activityLogger';
 
 const loading = ref(false);
 const message = ref("");
@@ -35,6 +36,7 @@ async function saveSettings() {
     // Convert reactive object to plain map
     const settingsMap = { ...settings };
     await invoke('update_settings', { settings: settingsMap });
+    await logActivity('SETTINGS', 'Settings', null, `Settings updated: ${Object.keys(settingsMap).join(', ')}`);
     message.value = "Settings saved successfully!";
     setTimeout(() => message.value = "", 3000);
   } catch (error) {

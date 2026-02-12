@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   const canViewReports = computed(() => ['super_admin', 'admin', 'manager', 'report_checker', 'inspector'].includes(role.value));
   const canManageProducts = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager'].includes(role.value));
   const canViewStock = computed(() => !!role.value); // Everyone logged in
+  const canViewActivityLog = computed(() => ['super_admin', 'admin', 'manager', 'inspector'].includes(role.value));
 
   function setUser(userData) {
     user.value = userData;
@@ -50,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
     canViewReports,
     canManageProducts,
     canViewStock,
+    canViewActivityLog,
     setUser, 
     logout 
   };

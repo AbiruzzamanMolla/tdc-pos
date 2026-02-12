@@ -68,7 +68,9 @@ pub fn run() {
             commands::check_setup_required,
             commands::setup_admin,
             commands::change_password,
-            commands::update_user_role
+            commands::update_user_role,
+            commands::log_activity,
+            commands::get_activity_logs
         ])
 
 

@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { useAuthStore } from '../stores/auth';
+import { logActivity } from '../utils/activityLogger';
 
 const auth = useAuthStore();
 const users = ref([]);
@@ -71,6 +72,7 @@ async function createUser() {
 
     try {
         await invoke('create_user', { user: { ...form } });
+        await logActivity('CREATE', 'User', null, `Created user: ${form.username} (role: ${form.role})`);
         showAddModal.value = false;
         form.username = '';
         form.password = '';
@@ -92,6 +94,7 @@ async function deleteUser(id, username) {
 
     try {
         await invoke('delete_user', { id });
+        await logActivity('DELETE', 'User', id, `Deleted user: ${username}`);
         await loadUsers();
         showStatus('User deleted');
     } catch (err) {
@@ -132,6 +135,7 @@ async function handleChangePassword() {
             isSuperAdmin: auth.isSuperAdmin && !passwordForm.isSelfChange
         });
         showPasswordModal.value = false;
+        await logActivity('PASSWORD_CHANGE', 'User', passwordForm.targetUserId, `Password changed for: ${passwordForm.targetUsername}`);
         showStatus(`Password updated for ${passwordForm.targetUsername}`);
     } catch (err) {
         showStatus(err.toString(), 'error');
@@ -153,6 +157,7 @@ async function handleRoleChange() {
             newRole: roleForm.newRole
         });
         showRoleModal.value = false;
+        await logActivity('ROLE_CHANGE', 'User', roleForm.targetUserId, `Role changed for ${roleForm.targetUsername} to ${roleForm.newRole}`);
         await loadUsers();
         showStatus(`Role updated for ${roleForm.targetUsername}`);
     } catch (err) {
@@ -323,7 +328,7 @@ onMounted(loadUsers);
                     class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg">✕</button>
                 <h2 class="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">Change Password</h2>
                 <p class="text-gray-400 text-xs font-bold mb-6">For user: <span class="text-blue-600">{{
-                        passwordForm.targetUsername }}</span></p>
+                    passwordForm.targetUsername }}</span></p>
 
                 <form @submit.prevent="handleChangePassword" class="space-y-4">
                     <div v-if="passwordForm.isSelfChange">
@@ -369,7 +374,7 @@ onMounted(loadUsers);
                     class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg">✕</button>
                 <h2 class="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">Change Role</h2>
                 <p class="text-gray-400 text-xs font-bold mb-6">For user: <span class="text-purple-600">{{
-                        roleForm.targetUsername }}</span></p>
+                    roleForm.targetUsername }}</span></p>
 
                 <form @submit.prevent="handleRoleChange" class="space-y-4">
                     <div>

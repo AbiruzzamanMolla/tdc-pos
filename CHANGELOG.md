@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.0] - 2026-02-12
+
+### Added
+
+- **Global Theme Propagation**: All page-level elements (headings, cards, inputs, buttons, badges, table headers, focus rings) now respond to the active theme via CSS custom property overrides in `style.css`. Changing themes in the sidebar instantly updates every page's appearance.
+- **Activity Log System**: Full audit trail for all system actions.
+  - **Backend**: New `activity_logs` database table, `log_activity` and `get_activity_logs` Tauri commands.
+  - **Frontend**: Reusable `logActivity()` helper (`utils/activityLogger.js`) auto-injects user context.
+  - **ActivityLog.vue Page**: Paginated list with color-coded action badges, search, filter by action type and entity, relative timestamps ("2m ago"), and "Load More" pagination.
+  - **Instrumented Pages**: Products (create/update/delete), Buying (create/delete), Selling (create/delete), Users (create/delete/password change/role change), Login (login/setup), Settings (save), Backup (backup/restore) — all emit activity logs automatically.
+- **Dark Theme**: Added a full `Dark` theme option (🖤) with deep blacks and grays for low-light environments.
+- **Activity Log Permission**: New `canViewActivityLog` computed property in auth store, granted to Super Admin, Admin, Manager, and Inspector roles.
+- **Sidebar**: Activity Log nav link under System section. System section visibility updated to include `canViewActivityLog`.
+
+### Changed
+
+- **Theme Store**: Expanded with additional tokens: `mainTextSecondary`, `mainInputBg`, `mainInputBorder`, `mainTableHeaderBg`, `mainBadgeBg/Text`, `btnPrimary*`.
+- **style.css**: Comprehensive global CSS overrides using `var(--t-*)` custom properties.
+
 ## [0.14.0] - 2026-02-12
 
 ### Added

@@ -194,3 +194,15 @@ pub struct StockMovement {
     pub quantity: f64,
     pub price: f64,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ActivityLog {
+    pub id: Option<i64>,
+    pub user_id: Option<i64>,
+    pub username: String,
+    pub action: String,        // CREATE, UPDATE, DELETE, LOGIN, BACKUP, RESTORE, etc.
+    pub entity_type: String,   // Product, Order, Purchase, User, Settings, Backup
+    pub entity_id: Option<i64>,
+    pub description: String,
+    pub created_at: Option<String>,
+}

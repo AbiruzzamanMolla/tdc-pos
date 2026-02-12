@@ -1094,3 +1094,48 @@ pub fn get_product_stock_history(product_id: i64, db: State<Database>) -> Result
 
     Ok(movements)
 }
+
+#[tauri::command]
+pub fn log_activity(
+    user_id: Option<i64>,
+    username: String,
+    action: String,
+    entity_type: String,
+    entity_id: Option<i64>,
+    description: String,
+    db: State<Database>
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO activity_logs (user_id, username, action, entity_type, entity_id, description) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![user_id, username, action, entity_type, entity_id, description],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_activity_logs(limit: i64, offset: i64, db: State<Database>) -> Result<Vec<crate::models::ActivityLog>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(
+        "SELECT id, user_id, username, action, entity_type, entity_id, description, created_at FROM activity_logs ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![limit, offset], |row| {
+        Ok(crate::models::ActivityLog {
+            id: Some(row.get(0)?),
+            user_id: row.get(1)?,
+            username: row.get(2)?,
+            action: row.get(3)?,
+            entity_type: row.get(4)?,
+            entity_id: row.get(5)?,
+            description: row.get(6)?,
+            created_at: Some(row.get(7)?),
+        })
+    }).map_err(|e| e.to_string())?;
+
+    let mut logs = Vec::new();
+    for log in rows {
+        logs.push(log.map_err(|e| e.to_string())?);
+    }
+    Ok(logs)
+}

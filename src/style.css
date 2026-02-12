@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =============================================
+   GLOBAL THEME OVERRIDES
+   These use CSS custom properties set by the
+   theme store to unify all page colors.
+   ============================================= */
+
+/* --- Page headings --- */
+h1,
+h2,
+h3 {
+  color: var(--t-main-text, #111827);
+}
+
+/* --- Cards / Panels --- */
+.bg-white {
+  background-color: var(--t-main-card-bg, #ffffff) !important;
+  border-color: var(--t-main-card-border, #f3f4f6) !important;
+}
+
+/* --- Table headers --- */
+thead,
+.bg-gray-50,
+table thead {
+  background-color: var(--t-main-table-header-bg, #f9fafb) !important;
+}
+
+/* --- Text colors --- */
+.text-gray-900 {
+  color: var(--t-main-text, #111827) !important;
+}
+.text-gray-800 {
+  color: var(--t-main-text, #111827) !important;
+}
+.text-gray-700 {
+  color: var(--t-main-text-secondary, #374151) !important;
+}
+.text-gray-600 {
+  color: var(--t-main-text-secondary, #374151) !important;
+}
+.text-gray-500 {
+  color: var(--t-main-muted, #6b7280) !important;
+}
+.text-gray-400 {
+  color: var(--t-main-muted, #9ca3af) !important;
+}
+
+/* --- Input fields --- */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--t-main-input-bg, #f9fafb) !important;
+  border-color: var(--t-main-input-border, #e5e7eb) !important;
+  color: var(--t-main-text, #111827) !important;
+}
+
+/* --- Primary buttons (blue-600 pattern) --- */
+.bg-blue-600,
+.bg-gradient-to-r.from-blue-600 {
+  background: var(--t-btn-primary-bg, #3b82f6) !important;
+  color: var(--t-btn-primary-text, #ffffff) !important;
+}
+.bg-blue-600:hover,
+.hover\:bg-blue-700:hover {
+  background: var(--t-btn-primary-hover, #2563eb) !important;
+}
+
+/* --- Accent badges --- */
+.bg-blue-50 {
+  background-color: var(--t-accent-light, #dbeafe) !important;
+}
+.text-blue-600,
+.text-blue-700,
+.text-blue-500 {
+  color: var(--t-accent-light-text, #1e40af) !important;
+}
+
+/* --- Focus rings --- */
+input:focus,
+select:focus,
+textarea:focus {
+  --tw-ring-color: var(--t-accent, #3b82f6) !important;
+  border-color: var(--t-accent, #3b82f6) !important;
+}
+
+/* --- Accent gradient button --- */
+.shadow-blue-500\/20,
+.shadow-blue-500\/30,
+.shadow-blue-600\/20 {
+  --tw-shadow-color: var(--t-accent-shadow, rgba(59, 130, 246, 0.2)) !important;
+}
+
+/* --- Main background --- */
+.bg-gray-50,
+main.bg-gray-50,
+.bg-gray-100 {
+  background-color: var(--t-main-bg, #f9fafb) !important;
+}

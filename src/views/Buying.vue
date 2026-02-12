@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
+import { logActivity } from '../utils/activityLogger';
 
 const viewMode = ref('new');
 const purchases = ref([]);
@@ -157,6 +158,7 @@ async function savePurchase() {
     }));
 
     await invoke('create_purchase', { purchase: purchaseData, items: itemsData });
+    await logActivity('CREATE', 'Purchase', null, `New purchase from ${form.supplier_name || 'Unknown'} — ${cart.value.length} items, Total: ${totalAmount.value}`);
 
     // Reset
     cart.value = [];
@@ -189,6 +191,7 @@ async function deletePurchase(purchase) {
   if (!confirm(`Are you sure you want to delete this buying entry? It will reverse stock quantities.`)) return;
   try {
     await invoke('delete_purchase', { purchaseId: purchase.purchase_id });
+    await logActivity('DELETE', 'Purchase', purchase.purchase_id, `Deleted purchase #${purchase.purchase_id} from ${purchase.supplier_name || 'Unknown'}`);
     loadPurchases();
   } catch (error) {
     console.error("Failed to delete buying entry:", error);
@@ -425,7 +428,7 @@ onMounted(() => {
           <div class="flex justify-between items-center text-left">
             <span class="text-xs font-black text-gray-400 uppercase tracking-widest">Grand Total</span>
             <span class="text-3xl font-black text-gray-900 font-mono">{{ currencySymbol }}{{ totalAmount.toFixed(2)
-              }}</span>
+            }}</span>
           </div>
           <button @click="savePurchase" :disabled="cart.length === 0"
             class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-blue-700 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all uppercase tracking-widest">
@@ -527,7 +530,7 @@ onMounted(() => {
                 <td class="p-3 font-extrabold text-gray-900 text-sm">{{ item.product_name }}</td>
                 <td class="p-3 text-right font-mono text-xs">{{ item.quantity }}</td>
                 <td class="p-3 text-right font-mono text-xs">{{ currencySymbol }}{{ (item.buying_price || 0).toFixed(2)
-                  }}</td>
+                }}</td>
                 <td class="p-3 text-right text-amber-600 font-mono text-xs">{{ currencySymbol }}{{ (item.extra_charge ||
                   0).toFixed(2) }}</td>
                 <td class="p-3 text-right font-black text-blue-600 font-mono text-xs">{{ currencySymbol }}{{

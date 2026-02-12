@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
+import { logActivity } from '../utils/activityLogger';
 
 const viewMode = ref('pos');
 const products = ref([]);
@@ -116,6 +117,7 @@ async function deleteOrder(order) {
   if (!confirm(`Are you sure you want to delete Sale #${order.order_id}? This will restore stock quantities.`)) return;
   try {
     await invoke('delete_order', { orderId: order.order_id });
+    await logActivity('DELETE', 'Order', order.order_id, `Deleted sale #${order.order_id} — ${order.customer_name || 'Guest'}`);
     loadOrders();
   } catch (e) {
     console.error("Failed to delete order", e);
@@ -204,6 +206,7 @@ async function processOrder() {
     }));
 
     await invoke('create_order', { order: orderData, items: itemsData });
+    await logActivity('CREATE', 'Order', null, `New sale to ${form.customer_name || 'Guest'} — ${cart.value.length} items, Total: ${grandTotal.value}`);
 
     cart.value = [];
     checkoutModal.value = false;

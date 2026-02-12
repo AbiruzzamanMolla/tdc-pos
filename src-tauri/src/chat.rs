@@ -113,6 +113,7 @@ pub fn delete_conversation(conversation_id: i64, db: State<Database>) -> Result<
 
 #[command]
 pub async fn send_chat_message(conversation_id: i64, user_message: String, api_key: String, db: State<'_, Database>) -> Result<Message, String> {
+    println!("DEBUG: send_chat_message called. conversation_id: {}, user_message: {}, api_key_len: {}", conversation_id, user_message, api_key.len());
     // 1. Save User Message
     {
         let conn = db.conn.lock().map_err(|e| e.to_string())?;
@@ -137,7 +138,7 @@ pub async fn send_chat_message(conversation_id: i64, user_message: String, api_k
     }
     
     let client = reqwest::Client::new();
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={}", api_key);
+    let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}", api_key);
     
     let request_body = GeminiRequest { contents };
     

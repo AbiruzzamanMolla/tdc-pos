@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.5] - 2026-02-12
+
+### Changed
+
+- **AI Model**: Upgraded chat model to `gemini-2.0-flash` for improved performance and reasoning capabilities.
+
+## [0.17.4] - 2026-02-12
+
+### Fixed
+
+- **Dashboard**: Fixed `locale_name` displaying incorrectly in the dashboard language switcher.
+- **Chat**: Fixed an issue where sending messages would fail due to parameter mismatch between frontend and backend.
+- **Translations**: Added missing `locale_name` key to translation files.
+
 ## [0.17.3] - 2026-02-12
 
 ### Added

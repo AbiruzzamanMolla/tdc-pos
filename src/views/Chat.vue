@@ -41,7 +41,8 @@ const send = async () => {
         await sendMessage(text);
     } catch (e) {
         input.value = text; // Restore on fail
-        alert(e.message || "Failed to send message");
+        const errorMsg = typeof e === 'string' ? e : (e.message || JSON.stringify(e));
+        alert("Failed to send: " + errorMsg);
     }
 };
 
@@ -99,7 +100,8 @@ watch(messages, () => {
                                 <span>{{ msg.sender === 'user' ? 'You' : 'Assistant' }}</span>
                                 <span>{{ new Date(msg.created_at).toLocaleTimeString([], {
                                     hour: '2-digit',
-                                    minute:'2-digit'}) }}</span>
+                                    minute: '2-digit'
+                                }) }}</span>
                             </div>
                             <div class="whitespace-pre-wrap leading-relaxed text-sm markdown-body">{{ msg.content }}
                             </div>

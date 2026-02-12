@@ -37,7 +37,9 @@ export const useI18nStore = defineStore('i18n', {
         system_integrity: 'System Integrity',
         catalog_size: 'Catalog Size',
         auth_status: 'Auth Status',
+
         last_updated: 'Last Updated',
+        locale_name: 'English',
       },
       bn: {
         dashboard: 'ড্যাশবোর্ড',
@@ -73,6 +75,7 @@ export const useI18nStore = defineStore('i18n', {
         catalog_size: 'ক্যাটালগ সাইজ',
         auth_status: 'ইউজার রোল',
         last_updated: 'সর্বশেষ আপডেট',
+        locale_name: 'বাংলা',
       }
     }
   }),

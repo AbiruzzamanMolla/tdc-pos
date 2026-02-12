@@ -23,6 +23,11 @@ Update the version number in the following files. Use [Semantic Versioning](http
   - Categories: `### Added`, `### Changed`, `### Fixed`, `### Removed`
   - List all significant changes since the last release.
 
+### 1.4 Update Calculations
+
+- **`CALCULATIONS.md`**: Update the calculations if any changes were made.
+  - follow previous structure.
+
 ## 2. Validation
 
 ### 2.1 Run Tests

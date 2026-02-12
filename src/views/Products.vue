@@ -23,10 +23,17 @@ const form = ref({
   unit: "pcs",
   tax_percentage: 0,
   original_price: 0,
+  profit_percentage: 0,
   facebook_link: "",
   product_link: "",
   images: [],        // raw file paths for saving
   imagesPreviews: [] // base64 data URIs for display
+});
+
+const expectedSellingPrice = computed(() => {
+  const buy = Number(form.value.buying_price) || 0;
+  const percent = Number(form.value.profit_percentage) || 0;
+  return buy + (buy * (percent / 100));
 });
 
 const showViewModal = ref(false);
@@ -103,6 +110,7 @@ async function openModal(product = null) {
       unit: "pcs",
       tax_percentage: 0,
       original_price: 0,
+      profit_percentage: 0,
       facebook_link: "",
       product_link: "",
       images: [],
@@ -162,6 +170,7 @@ async function saveProduct() {
       unit: form.value.unit,
       tax_percentage: Number(form.value.tax_percentage),
       original_price: Number(form.value.original_price),
+      profit_percentage: Number(form.value.profit_percentage),
       facebook_link: form.value.facebook_link,
       product_link: form.value.product_link,
       created_at: form.value.created_at,
@@ -324,6 +333,15 @@ onMounted(() => {
             </div>
 
             <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Original Product Price</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
+                <input v-model.number="form.original_price" type="number" step="0.01"
+                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+              </div>
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Buying Price (Average Cost)</label>
               <div class="relative">
                 <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
@@ -331,25 +349,39 @@ onMounted(() => {
                   class="w-full border border-gray-100 bg-gray-50 rounded-lg pl-8 pr-3 py-2 text-gray-500 text-sm cursor-not-allowed"
                   disabled>
               </div>
-              <span class="text-[10px] text-blue-600 font-medium">Auto-calculated via Weighted Average</span>
+              <span class="text-[10px] text-blue-600 font-medium whitespace-nowrap">Auto-updated via weighted average
+                procurement</span>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Selling Price</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Profit Percentage (%)</label>
               <div class="relative">
-                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
-                <input v-model.number="form.default_selling_price" type="number" step="0.01"
-                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+                <input v-model.number="form.profit_percentage" type="number" step="0.1"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm transition-all shadow-sm">
+                <span class="absolute right-3 top-2 text-gray-400 text-xs font-bold">%</span>
               </div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-              <input v-model.number="form.stock_quantity" type="number"
-                class="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-gray-500 text-sm cursor-not-allowed"
-                disabled>
-              <span class="text-[10px] text-amber-600 font-medium whitespace-nowrap">Manage stock via Buying / Selling
-                entries</span>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Expected Selling Price</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
+                <input :value="expectedSellingPrice.toFixed(2)" type="text"
+                  class="w-full border border-gray-100 bg-blue-50/50 text-blue-700 font-bold rounded-lg pl-8 pr-3 py-2 text-sm cursor-not-allowed"
+                  disabled>
+              </div>
+              <span class="text-[10px] text-blue-600 font-medium italic">Buy Price + {{ form.profit_percentage
+                }}%</span>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Final Selling Price</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
+                <input v-model.number="form.default_selling_price" type="number" step="0.01"
+                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm shadow-sm">
+              </div>
+              <span class="text-[10px] text-gray-400">Target price for POS</span>
             </div>
 
             <div>
@@ -359,12 +391,11 @@ onMounted(() => {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Original Price</label>
-              <div class="relative">
-                <span class="absolute left-3 top-2 text-gray-500 text-sm">{{ currencySymbol }}</span>
-                <input v-model.number="form.original_price" type="number" step="0.01"
-                  class="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
-              </div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+              <input v-model.number="form.stock_quantity" type="number"
+                class="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-gray-500 text-sm cursor-not-allowed"
+                disabled>
+              <span class="text-[10px] text-amber-600 font-medium whitespace-nowrap">Auto-managed via entries</span>
             </div>
 
             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">

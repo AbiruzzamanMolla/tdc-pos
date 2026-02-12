@@ -34,6 +34,7 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             unit TEXT,
             tax_percentage REAL DEFAULT 0,
             original_price REAL DEFAULT 0,
+            profit_percentage REAL DEFAULT 0,
             facebook_link TEXT,
             product_link TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -142,6 +143,9 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
         }
         if !current_columns.contains("product_link") {
             conn.execute("ALTER TABLE products ADD COLUMN product_link TEXT", [])?;
+        }
+        if !current_columns.contains("profit_percentage") {
+            conn.execute("ALTER TABLE products ADD COLUMN profit_percentage REAL DEFAULT 0", [])?;
         }
     }
 

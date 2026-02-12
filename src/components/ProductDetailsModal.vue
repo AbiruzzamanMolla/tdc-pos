@@ -69,7 +69,7 @@ watch(() => props.show, (newVal) => {
                             {{ product.category || 'No Category' }}
                         </span>
                         <span class="text-gray-400 text-xs font-mono select-all">{{ product.product_code || 'No SKU'
-                            }}</span>
+                        }}</span>
                     </div>
                 </div>
             </div>
@@ -100,6 +100,12 @@ watch(() => props.show, (newVal) => {
                             class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Tax</span>
                         <span class="text-lg font-bold text-amber-700">{{ product.tax_percentage }}%</span>
                     </div>
+                    <div class="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                        <span
+                            class="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1.5">Profit
+                            %</span>
+                        <span class="text-lg font-bold text-purple-700">{{ product.profit_percentage }}%</span>
+                    </div>
                 </div>
 
                 <!-- Calculated Metrics -->
@@ -125,6 +131,19 @@ watch(() => props.show, (newVal) => {
                         </div>
                         <span class="text-2xl font-black text-green-600">{{ currencySymbol }}{{
                             ((product.default_selling_price || 0) - (product.buying_price || 0)).toFixed(2) }}</span>
+                    </div>
+                    <div
+                        class="flex items-center justify-between p-5 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 shadow-sm transition-all hover:shadow-md">
+                        <div>
+                            <span
+                                class="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1 text-left">Exp.
+                                Selling Price</span>
+                            <span class="text-xs text-gray-400 block text-left">(Buy + {{ product.profit_percentage
+                                }}%)</span>
+                        </div>
+                        <span class="text-2xl font-black text-purple-600">{{ currencySymbol }}{{
+                            ((product.buying_price || 0) + ((product.buying_price || 0) * (product.profit_percentage ||
+                                0) / 100)).toFixed(2) }}</span>
                     </div>
                 </div>
 

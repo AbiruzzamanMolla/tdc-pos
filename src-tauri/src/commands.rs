@@ -11,7 +11,7 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
     // Fetch products with the first image if available
     let mut stmt = conn.prepare("
         SELECT p.id, p.product_name, p.product_code, p.category, p.brand, p.buying_price, p.default_selling_price, 
-               p.stock_quantity, p.unit, p.tax_percentage, p.original_price, p.facebook_link, p.product_link,
+               p.stock_quantity, p.unit, p.tax_percentage, p.original_price, p.profit_percentage, p.facebook_link, p.product_link,
                p.created_at, p.updated_at, p.is_deleted,
                (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as image_path
         FROM products p
@@ -19,7 +19,7 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
     ").map_err(|e| e.to_string())?;
     
     let products_iter = stmt.query_map([], |row| {
-        let image_path: Option<String> = row.get(16)?;
+        let image_path: Option<String> = row.get(17)?;
         let images = image_path.map(|path| vec![path]);
 
         Ok(Product {
@@ -34,11 +34,12 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
             unit: row.get(8)?,
             tax_percentage: row.get(9)?,
             original_price: row.get(10)?,
-            facebook_link: row.get(11)?,
-            product_link: row.get(12)?,
-            created_at: row.get(13)?,
-            updated_at: row.get(14)?,
-            is_deleted: row.get(15)?,
+            profit_percentage: row.get(11)?,
+            facebook_link: row.get(12)?,
+            product_link: row.get(13)?,
+            created_at: row.get(14)?,
+            updated_at: row.get(15)?,
+            is_deleted: row.get(16)?,
             images,
         })
     }).map_err(|e| e.to_string())?;
@@ -160,7 +161,7 @@ pub fn create_product(product: Product, images: Vec<String>, db: State<Database>
    let tx = conn.transaction().map_err(|e| e.to_string())?;
    
    tx.execute(
-       "INSERT INTO products (product_name, product_code, category, brand, buying_price, default_selling_price, stock_quantity, unit, tax_percentage, original_price, facebook_link, product_link) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+       "INSERT INTO products (product_name, product_code, category, brand, buying_price, default_selling_price, stock_quantity, unit, tax_percentage, original_price, profit_percentage, facebook_link, product_link) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
        params![
            product.product_name,
            product.product_code,
@@ -172,6 +173,7 @@ pub fn create_product(product: Product, images: Vec<String>, db: State<Database>
            product.unit,
            product.tax_percentage,
            product.original_price,
+           product.profit_percentage,
            product.facebook_link,
            product.product_link
        ],
@@ -204,7 +206,7 @@ pub fn update_product(product: Product, images: Vec<String>, db: State<Database>
     
     // Update Product Details
     tx.execute(
-        "UPDATE products SET product_name = ?1, product_code = ?2, category = ?3, brand = ?4, buying_price = ?5, default_selling_price = ?6, stock_quantity = ?7, unit = ?8, tax_percentage = ?9, original_price = ?10, facebook_link = ?11, product_link = ?12, updated_at = CURRENT_TIMESTAMP WHERE id = ?13",
+        "UPDATE products SET product_name = ?1, product_code = ?2, category = ?3, brand = ?4, buying_price = ?5, default_selling_price = ?6, stock_quantity = ?7, unit = ?8, tax_percentage = ?9, original_price = ?10, profit_percentage = ?11, facebook_link = ?12, product_link = ?13, updated_at = CURRENT_TIMESTAMP WHERE id = ?14",
         params![
             product.product_name,
             product.product_code,
@@ -216,6 +218,7 @@ pub fn update_product(product: Product, images: Vec<String>, db: State<Database>
             product.unit,
             product.tax_percentage,
             product.original_price,
+            product.profit_percentage,
             product.facebook_link,
             product.product_link,
             product.id
@@ -453,71 +456,59 @@ pub fn get_orders(db: State<Database>) -> Result<Vec<Order>, String> {
 pub fn get_dashboard_stats(db: State<Database>) -> Result<DashboardStats, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
-    // Total Sales
-    let total_sales: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(grand_total), 0) FROM orders",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0.0);
-    
-    // Sales Today
-    let sales_today: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE date(order_date) = date('now', 'localtime')",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0.0);
-    
-    // Sales Month
-    let sales_month: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE strftime('%Y-%m', order_date) = strftime('%Y-%m', 'now', 'localtime')",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0.0);
-    
-    // Total Purchases
-    let total_purchases: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(total_amount), 0) FROM purchases",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0.0);
-    
-    // Total Cost of Goods Sold (COGS) from order_items
-    let total_cogs: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(quantity * buying_price_snapshot), 0) FROM order_items",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0.0);
+    // --- Sales Calculations ---
+    let total_sales: f64 = conn.query_row("SELECT COALESCE(SUM(grand_total), 0) FROM orders", [], |row| row.get(0)).unwrap_or(0.0);
+    let sales_today: f64 = conn.query_row("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE date(order_date) = date('now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
+    let sales_month: f64 = conn.query_row("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE strftime('%Y-%m', order_date) = strftime('%Y-%m', 'now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
+    let sales_year: f64 = conn.query_row("SELECT COALESCE(SUM(grand_total), 0) FROM orders WHERE strftime('%Y', order_date) = strftime('%Y', 'now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
 
-    // Total Profit = Total Sales - Total COGS
+    // --- Purchases Calculations ---
+    let total_purchases: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM purchases", [], |row| row.get(0)).unwrap_or(0.0);
+    let purchases_today: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM purchases WHERE date(purchase_date) = date('now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
+    let purchases_month: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM purchases WHERE strftime('%Y-%m', purchase_date) = strftime('%Y-%m', 'now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
+    let purchases_year: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM purchases WHERE strftime('%Y', purchase_date) = strftime('%Y', 'now', 'localtime')", [], |row| row.get(0)).unwrap_or(0.0);
+
+    // --- Profit Calculations (Sales - COGS) ---
+    // Helper to get COGS for a SQL condition
+    let get_cogs = |condition: &str| -> f64 {
+        let sql = format!("
+            SELECT COALESCE(SUM(oi.quantity * oi.buying_price_snapshot), 0) 
+            FROM order_items oi 
+            JOIN orders o ON oi.order_id = o.order_id 
+            WHERE {}", condition);
+        conn.query_row(&sql, [], |row| row.get(0)).unwrap_or(0.0)
+    };
+
+    let total_cogs = get_cogs("1=1");
+    let cogs_today = get_cogs("date(o.order_date) = date('now', 'localtime')");
+    let cogs_month = get_cogs("strftime('%Y-%m', o.order_date) = strftime('%Y-%m', 'now', 'localtime')");
+    let cogs_year  = get_cogs("strftime('%Y', o.order_date) = strftime('%Y', 'now', 'localtime')");
+
     let total_profit = total_sales - total_cogs;
-    
-    // Low Stock Count
-    let low_stock_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM products WHERE stock_quantity <= 5 AND is_deleted = 0",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
-    
-    // Order Count
-    let order_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM orders",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
+    let profit_today = sales_today - cogs_today;
+    let profit_month = sales_month - cogs_month;
+    let profit_year  = sales_year - cogs_year;
 
-    // Product Count
-    let product_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM products WHERE is_deleted = 0",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
+    // --- Inventory & Meta ---
+    let inventory_value: f64 = conn.query_row("SELECT COALESCE(SUM(stock_quantity * buying_price), 0) FROM products WHERE is_deleted = 0", [], |row| row.get(0)).unwrap_or(0.0);
+    let low_stock_count: i64 = conn.query_row("SELECT COUNT(*) FROM products WHERE stock_quantity <= 5 AND is_deleted = 0", [], |row| row.get(0)).unwrap_or(0);
+    let order_count: i64 = conn.query_row("SELECT COUNT(*) FROM orders", [], |row| row.get(0)).unwrap_or(0);
+    let product_count: i64 = conn.query_row("SELECT COUNT(*) FROM products WHERE is_deleted = 0", [], |row| row.get(0)).unwrap_or(0);
     
     Ok(DashboardStats {
-        total_sales,
         sales_today,
         sales_month,
+        sales_year,
+        total_sales,
+        purchases_today,
+        purchases_month,
+        purchases_year,
         total_purchases,
+        profit_today,
+        profit_month,
+        profit_year,
         total_profit,
+        inventory_value,
         low_stock_count,
         order_count,
         product_count,
@@ -528,13 +519,14 @@ pub fn get_dashboard_stats(db: State<Database>) -> Result<DashboardStats, String
 pub fn get_sales_report(start_date: String, end_date: String, db: State<Database>) -> Result<Vec<SalesReportItem>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
-    // Calculate profit per order: Grand Total - Sum(Item Cost)
     let mut stmt = conn.prepare(
         "SELECT 
             o.order_id, 
             o.order_date, 
             o.customer_name, 
-            o.grand_total, 
+            o.grand_total,
+            COALESCE(o.discount, 0),
+            COALESCE((SELECT COUNT(*) FROM order_items WHERE order_items.order_id = o.order_id), 0),
             (o.grand_total - COALESCE((SELECT SUM(quantity * buying_price_snapshot) FROM order_items WHERE order_items.order_id = o.order_id), 0)) as profit 
          FROM orders o 
          WHERE date(o.order_date) BETWEEN date(?1) AND date(?2)
@@ -547,7 +539,9 @@ pub fn get_sales_report(start_date: String, end_date: String, db: State<Database
             date: row.get(1)?,
             customer: row.get(2)?,
             total: row.get(3)?,
-            profit: row.get(4)?,
+            discount: row.get(4)?,
+            items_count: row.get(5)?,
+            profit: row.get(6)?,
         })
     }).map_err(|e| e.to_string())?;
     
@@ -564,7 +558,7 @@ pub fn get_inventory_report(db: State<Database>) -> Result<Vec<InventoryReportIt
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
-        "SELECT id, product_name, stock_quantity, unit, buying_price, (stock_quantity * buying_price) as stock_value 
+        "SELECT id, product_name, category, stock_quantity, unit, buying_price, default_selling_price, (stock_quantity * buying_price) as stock_value 
          FROM products 
          WHERE is_deleted = 0 
          ORDER BY stock_quantity ASC"
@@ -574,10 +568,12 @@ pub fn get_inventory_report(db: State<Database>) -> Result<Vec<InventoryReportIt
         Ok(InventoryReportItem {
             id: row.get(0)?,
             name: row.get(1)?,
-            stock: row.get(2)?,
-            unit: row.get(3)?,
-            cost_price: row.get(4)?,
-            stock_value: row.get(5)?,
+            category: row.get(2)?,
+            stock: row.get(3)?,
+            unit: row.get(4)?,
+            cost_price: row.get(5)?,
+            selling_price: row.get(6)?,
+            stock_value: row.get(7)?,
         })
     }).map_err(|e| e.to_string())?;
     

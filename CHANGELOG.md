@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.12.0] - 2026-02-12
+
+### Added
+
+- **Profit Percentage & Expected Selling Price**: Products now support a configurable profit margin (`profit_percentage`) with a real-time computed `Expected Selling Price`.
+- **Executive Dashboard Redesign**:
+  - Full Daily / Monthly / Yearly metrics for **Sales**, **Purchases**, and **Profits**.
+  - Tabbed data visualization (Sales, Purchases, Profit tabs).
+  - Live **Inventory Valuation** (Stock Qty × Avg Cost).
+  - Financial KPIs with snapshot-based COGS accuracy.
+- **Bangla / English Language Switching**: Dashboard supports runtime language toggle with persistent preference via `i18n` store.
+- **Reports & Analytics Overhaul**:
+  - 6 summary KPI cards for Sales reports (Revenue, Net Profit, Discounts, Orders, Avg Order Value, Profit Margin).
+  - 5 summary KPI cards for Inventory reports (Cost Value, Retail Value, Potential Profit, Out of Stock, Low Stock).
+  - Date preset buttons (Today, Week, Month, Year, All).
+  - Live search filtering across all report data.
+  - Enhanced PDF export with footer totals and margin data.
+  - Inventory report now includes Category, Selling Price, and per-item Margin %.
+- **Product Form Reordering**: Price fields in Add/Edit product now follow a logical flow: Original Price → Buying Price → Profit % → Expected Selling Price → Final Selling Price.
+- **CALCULATIONS.md**: Comprehensive documentation covering all system formulas across Products, Procurement, POS, and Dashboard modules.
+
+### Changed
+
+- **Backup & Restore Page**: Polished UI with status toasts, better empty states, improved restore workflow, and best-practice tips.
+- **Product Details Modal**: Now displays Profit % badge and Expected Selling Price metric.
+- **Dashboard**: Replaced flat metric cards with premium gradient KPI cards and dark-mode system integrity panel.
+
+### Fixed
+
+- **Dashboard Profit Accuracy**: Profit calculations now use `buying_price_snapshot` from `order_items` joined with `orders` for precise temporal filtering.
+
 ## [0.11.0] - 2024-05-24
 
 ### Added

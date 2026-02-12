@@ -13,6 +13,7 @@ pub struct Product {
     pub unit: Option<String>,
     pub tax_percentage: f64,
     pub original_price: f64,
+    pub profit_percentage: f64,
     pub facebook_link: Option<String>,
     pub product_link: Option<String>,
     pub created_at: Option<String>,
@@ -109,11 +110,26 @@ pub struct OrderItemDetail {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DashboardStats {
-    pub total_sales: f64,
+    // Sales
     pub sales_today: f64,
     pub sales_month: f64,
+    pub sales_year: f64,
+    pub total_sales: f64,
+    
+    // Purchases
+    pub purchases_today: f64,
+    pub purchases_month: f64,
+    pub purchases_year: f64,
     pub total_purchases: f64,
+    
+    // Profit
+    pub profit_today: f64,
+    pub profit_month: f64,
+    pub profit_year: f64,
     pub total_profit: f64,
+    
+    // Inventory & General
+    pub inventory_value: f64,
     pub low_stock_count: i64,
     pub order_count: i64,
     pub product_count: i64,
@@ -125,6 +141,8 @@ pub struct SalesReportItem {
     pub date: String,
     pub customer: Option<String>,
     pub total: f64,
+    pub discount: f64,
+    pub items_count: i64,
     pub profit: f64,
 }
 
@@ -132,9 +150,11 @@ pub struct SalesReportItem {
 pub struct InventoryReportItem {
     pub id: i64,
     pub name: String,
+    pub category: Option<String>,
     pub stock: f64,
     pub unit: Option<String>,
     pub cost_price: f64,
+    pub selling_price: f64,
     pub stock_value: f64,
 }
 

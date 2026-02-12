@@ -234,7 +234,7 @@ onMounted(() => {
     </div>
 
     <!-- NEW BUYING VIEW -->
-    <div v-if="viewMode === 'new'" class="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden">
+    <div v-if="viewMode === 'new'" class="flex flex-col xl:flex-row flex-1 gap-6 overflow-hidden">
 
       <!-- Left: Products Catalog -->
       <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-0">

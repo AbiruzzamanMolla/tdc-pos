@@ -257,7 +257,7 @@ onMounted(() => {
     </div>
 
     <!-- POS VIEW -->
-    <div v-if="viewMode === 'pos'" class="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
+    <div v-if="viewMode === 'pos'" class="flex flex-col xl:flex-row flex-1 gap-4 overflow-hidden">
 
       <!-- Left: Products -->
       <div class="flex-1 flex flex-col bg-white rounded-lg shadow overflow-hidden min-h-0">

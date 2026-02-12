@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.0] - 2026-02-12
+
+### Added
+
+- **Collapsible Sidebar**: New toggle mechanism for the sidebar. On desktop, it can be collapsed to maximize workspace. On mobile/tablet, it behaves as a slide-out drawer with backdrop overlay.
+- **Top Bar Navigation**: Added a persistent top bar (visible when sidebar is closed/mobile) containing the sidebar toggle and breadcrumb/page title.
+
+### Changed
+
+- **Responsive Design Overhaul**:
+  - **Buying & Selling Views**: Updated split-view layouts (Catalog + Cart) to break into vertical stacks on smaller screens (up to XL/1280px width) for better usability on laptops and tablets.
+  - **Dashboard**: Header layout now stacks vertically on mobile; stats cards adapt continuously from 1 to 4 columns.
+  - **Table Layouts**: All data tables (Users, Purchases, Sales) are now wrapped in horizontal scrolling containers to prevent layout breakage on small screens.
+  - **Modals**: Improved mobile spacing and max-width constraints.
+
 ## [0.16.0] - 2026-02-12
 
 ### Added

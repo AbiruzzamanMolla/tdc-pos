@@ -40,16 +40,16 @@ onMounted(() => {
 <template>
   <div class="h-full flex flex-col space-y-8 animate-in fade-in duration-500">
     <!-- Header -->
-    <div class="flex justify-between items-end">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
       <div>
         <h1 class="text-4xl font-black text-gray-900 tracking-tight">{{ i18n.t('executive_dashboard') }}</h1>
         <p class="text-gray-500 font-medium">{{ i18n.t('precision_analytics') }}</p>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-3 self-end sm:self-auto">
         <!-- Language Switcher -->
         <button @click="i18n.toggleLocale"
           class="bg-blue-50 text-blue-600 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 border border-blue-100 shadow-sm">
-          {{ i18n.locale === 'en' ? 'বাংলা' : 'English' }}
+          {{ i18n.t('locale_name') }}
         </button>
         <button @click="loadStats"
           class="bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95 text-sm">
@@ -65,7 +65,7 @@ onMounted(() => {
         <div class="text-blue-100 text-xs font-black uppercase tracking-widest opacity-80">{{
           i18n.t('inventory_valuation') }}</div>
         <div class="text-3xl font-black mt-2">{{ currencySymbol }}{{ stats.inventory_value.toLocaleString(undefined,
-          { minimumFractionDigits: 2}) }}</div>
+          { minimumFractionDigits: 2 }) }}</div>
         <div class="mt-4 flex items-center gap-2">
           <span class="px-2 py-0.5 bg-white/20 rounded-lg text-[10px] font-bold uppercase tracking-tighter">{{
             i18n.t('current_assets') }}</span>
@@ -75,9 +75,9 @@ onMounted(() => {
       <div
         class="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 rounded-3xl shadow-xl shadow-teal-100 text-white transform transition hover:scale-[1.02]">
         <div class="text-teal-100 text-xs font-black uppercase tracking-widest opacity-80">{{ i18n.t('lifetime_profit')
-          }}</div>
+        }}</div>
         <div class="text-3xl font-black mt-2">{{ currencySymbol }}{{ stats.total_profit.toLocaleString(undefined,
-          { minimumFractionDigits: 2}) }}</div>
+          { minimumFractionDigits: 2 }) }}</div>
         <div class="mt-4 flex items-center gap-2">
           <span class="px-2 py-0.5 bg-white/20 rounded-lg text-[10px] font-bold uppercase tracking-tighter">{{
             i18n.t('net_accrued') }}</span>
@@ -172,13 +172,13 @@ onMounted(() => {
           <h4 class="text-amber-600 text-xs font-black uppercase tracking-widest mb-2">{{ i18n.t('procurement_today') }}
           </h4>
           <div class="text-4xl font-black text-amber-900">{{ currencySymbol }}{{ stats.purchases_today.toLocaleString()
-            }}</div>
+          }}</div>
         </div>
         <div class="p-8 rounded-3xl bg-orange-50/50 border border-orange-100 relative overflow-hidden group">
           <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] font-black">FLOW</div>
           <h4 class="text-orange-600 text-xs font-black uppercase tracking-widest mb-2">{{ i18n.t('this_month') }}</h4>
           <div class="text-4xl font-black text-orange-900">{{ currencySymbol }}{{ stats.purchases_month.toLocaleString()
-            }}</div>
+          }}</div>
         </div>
         <div class="p-8 rounded-3xl bg-rose-50/50 border border-rose-100 relative overflow-hidden group">
           <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] font-black">CAPEX</div>
@@ -197,7 +197,7 @@ onMounted(() => {
           <h4 class="text-emerald-600 text-xs font-black uppercase tracking-widest mb-2">{{ i18n.t('today') }} ({{
             i18n.t('profit') }})</h4>
           <div class="text-4xl font-black text-emerald-900">{{ currencySymbol }}{{ stats.profit_today.toLocaleString()
-            }}</div>
+          }}</div>
           <div class="text-[10px] uppercase font-bold text-emerald-500 mt-6 tracking-widest">{{
             i18n.t('real_time_analysis') }}</div>
         </div>
@@ -208,7 +208,7 @@ onMounted(() => {
           <div class="text-4xl font-black text-teal-900">{{ currencySymbol }}{{ stats.profit_month.toLocaleString() }}
           </div>
           <div class="text-[10px] uppercase font-bold text-teal-500 mt-6 tracking-widest">{{ i18n.t('snapshot_accuracy')
-            }}</div>
+          }}</div>
         </div>
         <div class="p-8 rounded-3xl bg-cyan-50/50 border border-cyan-100 relative overflow-hidden group text-left">
           <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.05] font-black">YEAR</div>
@@ -241,7 +241,7 @@ onMounted(() => {
             class="flex flex-col items-center p-6 bg-purple-50 rounded-2xl hover:bg-purple-100 transition-colors group">
             <span class="text-2xl mb-2 group-hover:scale-110 transition-transform">🚛</span>
             <span class="text-[10px] font-black uppercase tracking-widest text-purple-700">{{ i18n.t('receive')
-              }}</span>
+            }}</span>
           </router-link>
           <router-link v-if="auth.canViewReports" to="/reports"
             class="flex flex-col items-center p-6 bg-emerald-50 rounded-2xl hover:bg-emerald-100 transition-colors group">

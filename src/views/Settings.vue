@@ -10,10 +10,10 @@ const message = ref("");
 const cleanupMsg = ref("");
 
 const cleanupOptions = reactive({
-  clean_sales: false,
-  clean_purchases: false,
-  clean_products: false,
-  clean_logs: false
+  cleanSales: false,
+  cleanPurchases: false,
+  cleanProducts: false,
+  cleanLogs: false
 });
 
 const settings = reactive({
@@ -58,8 +58,8 @@ async function saveSettings() {
 }
 
 async function handleCleanup() {
-  if (!cleanupOptions.clean_sales && !cleanupOptions.clean_purchases &&
-    !cleanupOptions.clean_products && !cleanupOptions.clean_logs) {
+  if (!cleanupOptions.cleanSales && !cleanupOptions.cleanPurchases &&
+    !cleanupOptions.cleanProducts && !cleanupOptions.cleanLogs) {
     alert("Please select at least one option to clean.");
     return;
   }
@@ -179,19 +179,19 @@ onMounted(() => {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <label
             class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-red-100 cursor-pointer hover:bg-red-50/50 transition">
-            <input v-model="cleanupOptions.clean_sales" type="checkbox"
+            <input v-model="cleanupOptions.cleanSales" type="checkbox"
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <span class="text-gray-800 font-bold">Sales History</span>
           </label>
           <label
             class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-red-100 cursor-pointer hover:bg-red-50/50 transition">
-            <input v-model="cleanupOptions.clean_purchases" type="checkbox"
+            <input v-model="cleanupOptions.cleanPurchases" type="checkbox"
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <span class="text-gray-800 font-bold">Purchase History</span>
           </label>
           <label
             class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-red-100 cursor-pointer hover:bg-red-50/50 transition">
-            <input v-model="cleanupOptions.clean_products" type="checkbox"
+            <input v-model="cleanupOptions.cleanProducts" type="checkbox"
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <div>
               <span class="text-gray-800 font-bold block">All Inventory</span>
@@ -200,7 +200,7 @@ onMounted(() => {
           </label>
           <label
             class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-red-100 cursor-pointer hover:bg-red-50/50 transition">
-            <input v-model="cleanupOptions.clean_logs" type="checkbox"
+            <input v-model="cleanupOptions.cleanLogs" type="checkbox"
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <span class="text-gray-800 font-bold">Activity Logs</span>
           </label>

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.17.1] - 2026-02-12
+
+### Fixed
+
+- **Database Cleanup**: Fixed an issue where the "Clean Database" command was sending invalid arguments to the backend (camelCase vs snake_case mismatch), now effectively allowing Super Admins to wipe data.
+
 ## [0.17.0] - 2026-02-12
 
 ### Added

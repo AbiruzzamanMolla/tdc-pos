@@ -3,6 +3,7 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { APP_VERSION } from './version'
 
 const route = useRoute()
 const router = useRouter()
@@ -129,7 +130,7 @@ onMounted(async () => {
       </div>
 
       <div class="p-3 bg-black/20 text-[10px] text-gray-500 text-center font-black">
-        TDC-POS v0.5.0
+        TDC-POS {{ APP_VERSION }}
       </div>
     </aside>
 

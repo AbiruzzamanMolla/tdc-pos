@@ -64,7 +64,11 @@ pub fn run() {
             commands::prune_backups,
             commands::check_and_auto_backup,
             commands::get_product_purchase_history,
-            commands::get_product_stock_history
+            commands::get_product_stock_history,
+            commands::check_setup_required,
+            commands::setup_admin,
+            commands::change_password,
+            commands::update_user_role
         ])
 
 

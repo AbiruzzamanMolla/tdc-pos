@@ -934,6 +934,77 @@ pub fn delete_user(id: i64, db: State<Database>) -> Result<(), String> {
     
     Ok(())
 }
+
+#[tauri::command]
+pub fn check_setup_required(db: State<Database>) -> Result<bool, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(count == 0)
+}
+
+#[tauri::command]
+pub fn setup_admin(username: String, password: String, db: State<Database>) -> Result<User, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    // Double-check no users exist
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    if count > 0 {
+        return Err("Setup has already been completed".to_string());
+    }
+
+    conn.execute(
+        "INSERT INTO users (username, password, role) VALUES (?1, ?2, 'super_admin')",
+        params![username, password],
+    ).map_err(|e| e.to_string())?;
+
+    let id = conn.last_insert_rowid();
+    Ok(User {
+        id: Some(id),
+        username,
+        password: None,
+        role: "super_admin".to_string(),
+        created_at: None,
+    })
+}
+
+#[tauri::command]
+pub fn change_password(user_id: i64, current_password: String, new_password: String, is_super_admin: bool, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+
+    if !is_super_admin {
+        // Verify current password
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM users WHERE id = ?1 AND password = ?2",
+            params![user_id, current_password],
+            |row| row.get(0),
+        ).map_err(|e| e.to_string())?;
+        if count == 0 {
+            return Err("Current password is incorrect".to_string());
+        }
+    }
+
+    conn.execute(
+        "UPDATE users SET password = ?1 WHERE id = ?2",
+        params![new_password, user_id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_user_role(user_id: i64, new_role: String, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "UPDATE users SET role = ?1 WHERE id = ?2",
+        params![new_role, user_id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_product_purchase_history(product_id: i64, db: State<Database>) -> Result<Vec<crate::models::ProductPurchaseHistory>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;

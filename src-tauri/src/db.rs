@@ -119,10 +119,7 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
-        -- Insert default super admin if no users exist
-        INSERT OR IGNORE INTO users (username, password, role) 
-        SELECT 'admin', 'admin123', 'super_admin' 
-        WHERE (SELECT COUNT(*) FROM users) = 0;
+        -- No default users seeded; setup is done via frontend on first launch.
         "
     )?;
 

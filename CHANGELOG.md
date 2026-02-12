@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.13.0] - 2026-02-12
+
+### Added
+
+- **Secure First-Install Setup**: On first launch (when no users exist), the app shows a dedicated setup screen to create a Super Admin account with username, password, and confirmation. No default credentials are ever exposed.
+- **Password Management**:
+  - Any logged-in user can change their own password (requires current password verification).
+  - Super Admins can reset any user's password without knowing the current one.
+- **Role Management**: Super Admins can change any user's role directly from the User Management page via a dedicated Role modal.
+- **Centralized Version Number**: Introduced `src/version.js` as the single source of truth for the app version. The sidebar footer and login page both reference this file.
+- **Backend Commands**: Added `check_setup_required`, `setup_admin`, `change_password`, and `update_user_role` Tauri commands.
+
+### Changed
+
+- **Login Page**: Removed hardcoded "Default: admin / admin123" text. Login page now conditionally shows setup mode or sign-in mode depending on database state.
+- **User Management Page**: Redesigned with action buttons for Password reset, Role change, and Delete. Status toast notifications replace `alert()` calls.
+- **Sidebar Version**: Now dynamically reads from `version.js` instead of a hardcoded string.
+
+### Security
+
+- **Removed Default Admin Seed**: The database initialization (`db.rs`) no longer inserts a default admin user. All accounts must be created through the secure setup flow.
+- **Password Validation**: Minimum 6-character password requirement enforced on setup, user creation, and password changes.
+
 ## [0.12.0] - 2026-02-12
 
 ### Added

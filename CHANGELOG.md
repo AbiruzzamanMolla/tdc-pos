@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.6] - 2026-02-20
+
+### Added
+
+- **Unsaved Changes Confirmation**: Navigation guards configured to prevent accidental data loss.
+  - A browser confirmation dialouge will now appear when attempting to leave the **Product Add/Edit** view if data has been entered.
+  - The same confirmation prompt will be triggered in the **Point of Sale** and **Procurement** interfaces when actively loaded carts are left open.
+
 ## [0.17.5] - 2026-02-12
 
 ### Changed

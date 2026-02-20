@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, reactive, watch } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
@@ -202,6 +203,13 @@ async function deletePurchase(purchase) {
 watch(viewMode, (newMode) => {
   if (newMode === 'history') loadPurchases();
   if (newMode === 'new') loadProducts();
+});
+
+onBeforeRouteLeave((to, from) => {
+  if (cart.value.length > 0) {
+    const answer = window.confirm('Your purchase cart is not empty. Are you sure you want to leave and discard it?');
+    if (!answer) return false;
+  }
 });
 
 onMounted(() => {

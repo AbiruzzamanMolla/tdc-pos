@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
@@ -220,6 +221,16 @@ function formatDate(dateStr) {
   if (!dateStr) return 'N/A';
   return new Date(dateStr).toLocaleString();
 }
+
+onBeforeRouteLeave((to, from) => {
+  if (showModal.value) {
+    const isFilled = form.value.product_name || form.value.product_code || form.value.brand || form.value.category || form.value.buying_price > 0 || form.value.default_selling_price > 0;
+    if (isFilled) {
+      const answer = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+      if (!answer) return false;
+    }
+  }
+});
 
 onMounted(() => {
 

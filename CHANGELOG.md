@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.8] - 2026-02-22
+
+### Added
+
+- **Edit Functionality**: Added the ability to edit and update past Purchase and Sale records directly from the History views. Changes correctly re-calculate and apply stock updates.
+
+## [0.17.7] - 2026-02-21
+
+### Added
+
+- **Editable Cart Quantities**: Added the ability to directly type and edit quantities for items in the Buying and Selling carts, improving speed over the previous +/- buttons.
+
 ## [0.17.6] - 2026-02-20
 
 ### Added

@@ -840,6 +840,188 @@ pub fn delete_order(order_id: i64, db: State<Database>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn update_purchase(purchase_id: i64, purchase: Purchase, items: Vec<PurchaseItem>, db: State<Database>) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    
+    // 1. Get old items to revert stock
+    let old_items: Vec<(i64, f64, f64)> = {
+        let mut stmt = tx.prepare("SELECT product_id, quantity, buying_price FROM purchase_items WHERE purchase_id = ?1").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(params![purchase_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        }).map_err(|e| e.to_string())?;
+        
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| e.to_string())?);
+        }
+        result
+    };
+
+    // 2. Revert Stock and recalculate buying_price
+    for (product_id, quantity, old_item_price) in old_items {
+        let (current_stock, current_buying_price): (f64, f64) = tx.query_row(
+            "SELECT stock_quantity, buying_price FROM products WHERE id = ?1",
+            params![product_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(|e| e.to_string())?;
+
+        let old_total_value = current_stock * current_buying_price;
+        let reverted_stock = current_stock - quantity;
+        
+        let new_buying_price = if reverted_stock > 0.0 {
+            (old_total_value - (quantity * old_item_price)) / reverted_stock
+        } else {
+            0.0
+        };
+
+        tx.execute(
+            "UPDATE products SET stock_quantity = ?1, buying_price = ?2 WHERE id = ?3",
+            params![reverted_stock, new_buying_price, product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    // 3. Delete old items
+    tx.execute("DELETE FROM purchase_items WHERE purchase_id = ?1", params![purchase_id]).map_err(|e| e.to_string())?;
+    
+    // 4. Update Purchase record
+    tx.execute(
+        "UPDATE purchases SET supplier_name = ?1, supplier_phone = ?2, invoice_number = ?3, purchase_date = ?4, total_amount = ?5, notes = ?6 WHERE purchase_id = ?7",
+        params![
+            purchase.supplier_name,
+            purchase.supplier_phone,
+            purchase.invoice_number,
+            purchase.purchase_date,
+            purchase.total_amount,
+            purchase.notes,
+            purchase_id
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    // 5. Insert new items and applying their stock/cost changes
+    for item in items {
+        tx.execute(
+            "INSERT INTO purchase_items (purchase_id, product_id, quantity, buying_price, extra_charge, subtotal, purchase_unit_cost) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                purchase_id,
+                item.product_id,
+                item.quantity,
+                item.buying_price,
+                item.extra_charge,
+                item.subtotal,
+                item.purchase_unit_cost
+            ],
+        ).map_err(|e| e.to_string())?;
+
+        let (old_quantity, old_average_cost): (f64, f64) = tx.query_row(
+            "SELECT stock_quantity, buying_price FROM products WHERE id = ?1",
+            params![item.product_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(|e| e.to_string())?;
+        
+        let old_total_value = old_quantity * old_average_cost;
+        let new_total_value = (item.quantity * item.buying_price) + item.extra_charge;
+
+        let updated_total_quantity = old_quantity + item.quantity;
+        let updated_total_value = old_total_value + new_total_value;
+
+        let new_average_buying_price = if updated_total_quantity > 0.0 {
+            updated_total_value / updated_total_quantity
+        } else {
+            item.purchase_unit_cost
+        };
+        
+        tx.execute(
+            "UPDATE products SET stock_quantity = ?1, buying_price = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
+            params![updated_total_quantity, new_average_buying_price, item.product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_order(order_id: i64, order: Order, items: Vec<OrderItem>, db: State<Database>) -> Result<(), String> {
+    let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    
+    // 1. Get old items to revert stock
+    let old_items: Vec<(i64, f64)> = {
+        let mut stmt = tx.prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?1").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(params![order_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        }).map_err(|e| e.to_string())?;
+        
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| e.to_string())?);
+        }
+        result
+    };
+
+    // 2. Revert Stock (Add back what was sold)
+    for (product_id, quantity) in old_items {
+        tx.execute(
+            "UPDATE products SET stock_quantity = stock_quantity + ?1 WHERE id = ?2",
+            params![quantity, product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    // 3. Delete old items
+    tx.execute("DELETE FROM order_items WHERE order_id = ?1", params![order_id]).map_err(|e| e.to_string())?;
+    
+    // 4. Update Order record
+    tx.execute(
+        "UPDATE orders SET order_date = ?1, order_type = ?2, customer_name = ?3, customer_phone = ?4, customer_address = ?5, subtotal = ?6, extra_charge = ?7, delivery_charge = ?8, discount = ?9, grand_total = ?10, payment_method = ?11, notes = ?12 WHERE order_id = ?13",
+        params![
+            order.order_date,
+            order.order_type,
+            order.customer_name,
+            order.customer_phone,
+            order.customer_address,
+            order.subtotal,
+            order.extra_charge,
+            order.delivery_charge,
+            order.discount,
+            order.grand_total,
+            order.payment_method,
+            order.notes,
+            order_id
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    // 5. Insert new items and updating product stock
+    for item in items {
+        let buying_price: f64 = tx.query_row(
+            "SELECT buying_price FROM products WHERE id = ?1",
+            params![item.product_id],
+            |row| row.get(0),
+        ).map_err(|e| e.to_string())?;
+        
+        tx.execute(
+            "INSERT INTO order_items (order_id, product_id, quantity, selling_price, subtotal, buying_price_snapshot) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                order_id,
+                item.product_id,
+                item.quantity,
+                item.selling_price,
+                item.subtotal,
+                buying_price
+            ],
+        ).map_err(|e| e.to_string())?;
+        
+        tx.execute(
+            "UPDATE products SET stock_quantity = stock_quantity - ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            params![item.quantity, item.product_id],
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_order_items(order_id: i64, db: State<Database>) -> Result<Vec<crate::models::OrderItemDetail>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     

@@ -15,6 +15,7 @@ const searchQuery = ref("");
 const currencySymbol = ref('৳');
 const showProductDetails = ref(false);
 const selectedProductDetails = ref(null);
+const editingPurchaseId = ref(null);
 
 const form = reactive({
   supplier_name: "",
@@ -119,6 +120,19 @@ function updateQuantity(item, delta) {
   }
 }
 
+function handleQuantityInput(item) {
+  if (typeof item.quantity === 'number' && item.quantity > 0) {
+    recalculateItem(item);
+  }
+}
+
+function handleQuantityBlur(item) {
+  if (typeof item.quantity !== 'number' || item.quantity < 1) {
+    item.quantity = 1;
+  }
+  recalculateItem(item);
+}
+
 function updatePrice(item) {
   if (item.buying_price < 0) item.buying_price = 0;
   recalculateItem(item);
@@ -158,21 +172,63 @@ async function savePurchase() {
       purchase_unit_cost: Number(item.purchase_unit_cost)
     }));
 
-    await invoke('create_purchase', { purchase: purchaseData, items: itemsData });
-    await logActivity('CREATE', 'Purchase', null, `New purchase from ${form.supplier_name || 'Unknown'} — ${cart.value.length} items, Total: ${totalAmount.value}`);
+    if (editingPurchaseId.value) {
+      await invoke('update_purchase', { purchaseId: editingPurchaseId.value, purchase: purchaseData, items: itemsData });
+      await logActivity('UPDATE', 'Purchase', editingPurchaseId.value, `Updated purchase #${editingPurchaseId.value} from ${form.supplier_name || 'Unknown'} — ${cart.value.length} items, Total: ${totalAmount.value}`);
+      alert("Buying entry updated successfully! Stock and Weighted Average Price adjusted.");
+    } else {
+      await invoke('create_purchase', { purchase: purchaseData, items: itemsData });
+      await logActivity('CREATE', 'Purchase', null, `New purchase from ${form.supplier_name || 'Unknown'} — ${cart.value.length} items, Total: ${totalAmount.value}`);
+      alert("Buying entry saved successfully! Stock and Weighted Average Price updated.");
+    }
 
     // Reset
-    cart.value = [];
-    form.supplier_name = "";
-    form.supplier_phone = "";
-    form.invoice_number = "";
-    form.purchase_date = new Date().toISOString().split('T')[0];
-    form.notes = "";
+    cancelEdit();
     loadProducts();
-    alert("Buying entry saved successfully! Stock and Weighted Average Price updated.");
   } catch (error) {
     console.error("Failed to save buying entry:", error);
     alert("Error saving buying entry: " + error);
+  }
+}
+
+function cancelEdit() {
+  cart.value = [];
+  form.supplier_name = "";
+  form.supplier_phone = "";
+  form.invoice_number = "";
+  form.purchase_date = new Date().toISOString().split('T')[0];
+  form.notes = "";
+  editingPurchaseId.value = null;
+}
+
+async function editPurchase(purchase) {
+  try {
+    const items = await invoke('get_purchase_items', { purchaseId: purchase.purchase_id });
+
+    // Populate form
+    form.supplier_name = purchase.supplier_name || "";
+    form.supplier_phone = purchase.supplier_phone || "";
+    form.invoice_number = purchase.invoice_number || "";
+    form.purchase_date = purchase.purchase_date ? purchase.purchase_date.split('T')[0] : new Date().toISOString().split('T')[0];
+    form.notes = purchase.notes || "";
+
+    // Populate cart
+    cart.value = items.map(item => ({
+      product_id: item.product_id,
+      product_name: item.product_name,
+      _thumb: null, // We don't have thumb easily here, could fetch but minimal impact
+      quantity: item.quantity,
+      buying_price: item.buying_price,
+      extra_charge: item.extra_charge,
+      subtotal: item.subtotal,
+      purchase_unit_cost: item.purchase_unit_cost
+    }));
+
+    editingPurchaseId.value = purchase.purchase_id;
+    viewMode.value = 'new';
+  } catch (e) {
+    console.error("Failed to load purchase for editing", e);
+    alert("Failed to load purchase details for editing.");
   }
 }
 
@@ -239,6 +295,23 @@ onMounted(() => {
           History
         </button>
       </div>
+    </div>
+
+    <!-- Edit Warning Banner -->
+    <div v-if="editingPurchaseId && viewMode === 'new'"
+      class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl mb-4 flex justify-between items-center shadow-sm">
+      <div class="flex items-center gap-2 font-bold text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clip-rule="evenodd" />
+        </svg>
+        You are currently editing Purchase #{{ editingPurchaseId }}
+      </div>
+      <button @click="cancelEdit"
+        class="text-xs font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors bg-amber-200/50 px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-200">
+        Cancel Edit
+      </button>
     </div>
 
     <!-- NEW BUYING VIEW -->
@@ -367,8 +440,9 @@ onMounted(() => {
                 <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm">
                   <button @click="updateQuantity(item, -1)"
                     class="px-2 py-1 text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all">-</button>
-                  <span class="flex-1 font-black text-xs min-w-[32px] text-center text-gray-700 font-mono">{{
-                    item.quantity }}</span>
+                  <input type="number" v-model.number="item.quantity" @input="handleQuantityInput(item)"
+                    @blur="handleQuantityBlur(item)"
+                    class="flex-1 font-black text-xs min-w-[32px] w-12 text-center text-gray-700 font-mono bg-transparent outline-none focus:ring-0 p-0 m-0 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none">
                   <button @click="updateQuantity(item, 1)"
                     class="px-2 py-1 text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all">+</button>
                 </div>
@@ -440,7 +514,7 @@ onMounted(() => {
           </div>
           <button @click="savePurchase" :disabled="cart.length === 0"
             class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-blue-700 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all uppercase tracking-widest">
-            Confirm & Update Stock
+            {{ editingPurchaseId ? 'Update Purchase & Stock' : 'Confirm & Update Stock' }}
           </button>
         </div>
       </div>
@@ -474,6 +548,8 @@ onMounted(() => {
             <td class="p-4 text-gray-400 text-xs italic truncate max-w-[150px]">{{ purchase.notes || '—' }}</td>
             <td class="p-4 text-center">
               <div class="flex justify-center gap-2">
+                <button @click="editPurchase(purchase)"
+                  class="bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Edit</button>
                 <button @click="viewPurchaseDetails(purchase)"
                   class="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Details</button>
                 <button @click="deletePurchase(purchase)"

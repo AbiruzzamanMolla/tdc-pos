@@ -18,6 +18,7 @@ const selectedOrder = ref(null);
 const currencySymbol = ref('৳');
 const showProductDetails = ref(false);
 const selectedProductDetails = ref(null);
+const editingOrderId = ref(null);
 
 const form = reactive({
   customer_name: "Guest",
@@ -167,6 +168,22 @@ function updateQuantity(item, delta) {
   }
 }
 
+function handleQuantityInput(item) {
+  if (typeof item.quantity === 'number') {
+    if (item.quantity > item.max_stock) item.quantity = item.max_stock;
+    if (item.quantity > 0) item.subtotal = item.quantity * item.selling_price;
+  }
+}
+
+function handleQuantityBlur(item) {
+  if (typeof item.quantity !== 'number' || item.quantity < 1) {
+    item.quantity = 1;
+  } else if (item.quantity > item.max_stock) {
+    item.quantity = item.max_stock;
+  }
+  item.subtotal = item.quantity * item.selling_price;
+}
+
 function updatePrice(item) {
   if (item.selling_price < 0) item.selling_price = 0;
   item.subtotal = item.quantity * item.selling_price;
@@ -206,19 +223,77 @@ async function processOrder() {
       buying_price_snapshot: null
     }));
 
-    await invoke('create_order', { order: orderData, items: itemsData });
-    await logActivity('CREATE', 'Order', null, `New sale to ${form.customer_name || 'Guest'} — ${cart.value.length} items, Total: ${grandTotal.value}`);
+    if (editingOrderId.value) {
+      await invoke('update_order', { orderId: editingOrderId.value, order: orderData, items: itemsData });
+      await logActivity('UPDATE', 'Order', editingOrderId.value, `Updated sale #${editingOrderId.value} — ${form.customer_name || 'Guest'} — ${cart.value.length} items, Total: ${grandTotal.value}`);
+      alert("Sale updated successfully!");
+    } else {
+      await invoke('create_order', { order: orderData, items: itemsData });
+      await logActivity('CREATE', 'Order', null, `New sale to ${form.customer_name || 'Guest'} — ${cart.value.length} items, Total: ${grandTotal.value}`);
+      alert("Sale completed successfully!");
+    }
 
     cart.value = [];
     checkoutModal.value = false;
     form.customer_name = "Guest";
     form.customer_phone = "";
     form.delivery_charge = 0;
+    editingOrderId.value = null;
     loadProducts();
-    alert("Sale completed successfully!");
   } catch (error) {
     console.error("Order failed:", error);
     alert("Sale failed: " + error);
+  }
+}
+
+function cancelEdit() {
+  cart.value = [];
+  form.customer_name = "Guest";
+  form.customer_phone = "";
+  form.delivery_charge = 0;
+  editingOrderId.value = null;
+}
+
+async function editOrder(order) {
+  try {
+    const items = await invoke('get_order_items', { orderId: order.order_id });
+
+    // Populate form
+    form.customer_name = order.customer_name || "Guest";
+    form.customer_phone = order.customer_phone || "";
+    form.customer_address = order.customer_address || "";
+    form.payment_method = order.payment_method || "cash";
+    form.delivery_charge = order.delivery_charge || 0;
+    form.details = order.notes || "";
+
+    // Populate cart
+    cart.value = items.map(item => ({
+      product_id: item.product_id,
+      product_name: item.product_name,
+      _thumb: null, // Minimal impact
+      quantity: item.quantity,
+      selling_price: item.selling_price,
+      // To correctly calculate discount autoDiscount later, we need to try to get the original default_selling_price if possible.
+      // Easiest is to fall back to the product's current default_selling_price if available, else use selling_price
+      default_selling_price: item.selling_price, // Fallback
+      subtotal: item.subtotal,
+      max_stock: 99999 // When editing an order, max_stock is complex as we'd need to re-add the old order quantity to current inventory. To simplify for the user, we won't strictly enforce max_stock on edits here, or we set a high limit.
+    }));
+
+    // Better attempt to set real max_stock and default_selling_price
+    for (let cItem of cart.value) {
+      let p = products.value.find(prod => prod.id === cItem.product_id);
+      if (p) {
+        cItem.max_stock = p.stock_quantity + cItem.quantity; // Current stock + what was already bought
+        cItem.default_selling_price = p.default_selling_price;
+      }
+    }
+
+    editingOrderId.value = order.order_id;
+    viewMode.value = 'pos';
+  } catch (e) {
+    console.error("Failed to load order for editing", e);
+    alert("Failed to load sale details for editing.");
   }
 }
 
@@ -262,6 +337,23 @@ onMounted(() => {
           History
         </button>
       </div>
+    </div>
+
+    <!-- Edit Warning Banner -->
+    <div v-if="editingOrderId && viewMode === 'pos'"
+      class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex justify-between items-center shadow-sm">
+      <div class="flex items-center gap-2 font-bold text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clip-rule="evenodd" />
+        </svg>
+        You are currently editing Sale #{{ editingOrderId }}
+      </div>
+      <button @click="cancelEdit"
+        class="text-xs font-bold uppercase text-amber-600 hover:text-amber-800 transition-colors bg-white px-3 py-1.5 rounded border border-amber-200 hover:bg-amber-100">
+        Cancel Edit
+      </button>
     </div>
 
     <!-- POS VIEW -->
@@ -337,7 +429,9 @@ onMounted(() => {
             <div class="flex items-center gap-2 mt-2 flex-wrap">
               <div class="flex items-center border rounded text-sm">
                 <button @click="updateQuantity(item, -1)" class="px-2 py-0.5 text-gray-600 hover:bg-gray-100">-</button>
-                <span class="px-2 font-bold text-xs">{{ item.quantity }}</span>
+                <input type="number" v-model.number="item.quantity" @input="handleQuantityInput(item)"
+                  @blur="handleQuantityBlur(item)"
+                  class="w-12 px-1 text-center font-bold text-xs bg-transparent outline-none focus:ring-0 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none">
                 <button @click="updateQuantity(item, 1)" class="px-2 py-0.5 text-gray-600 hover:bg-gray-100">+</button>
               </div>
               <span class="text-xs text-gray-400">×</span>
@@ -407,6 +501,8 @@ onMounted(() => {
             </td>
             <td class="p-3 text-center">
               <div class="flex justify-center gap-1">
+                <button @click="editOrder(order)"
+                  class="text-emerald-600 hover:text-emerald-800 text-xs font-medium border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50">Edit</button>
                 <button @click="viewOrderDetails(order)"
                   class="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">View</button>
                 <button @click="deleteOrder(order)"
@@ -426,7 +522,7 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-5 relative">
         <button @click="checkoutModal = false"
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl">✕</button>
-        <h2 class="text-xl font-bold mb-4 text-gray-800">Checkout</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">{{ editingOrderId ? 'Update Sale' : 'Checkout' }}</h2>
 
         <div class="space-y-3">
           <div>
@@ -479,7 +575,7 @@ onMounted(() => {
             class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
           <button @click="processOrder"
             class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm">
-            Confirm Payment
+            {{ editingOrderId ? 'Confirm Update' : 'Confirm Payment' }}
           </button>
         </div>
       </div>

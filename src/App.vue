@@ -134,6 +134,10 @@ function logout() {
           <span class="nav-icon">S</span>
           <span class="font-medium">Selling</span>
         </RouterLink>
+        <RouterLink to="/expenses" class="nav-link" active-class="nav-link-active">
+          <span class="nav-icon">E</span>
+          <span class="font-medium">Expenses</span>
+        </RouterLink>
 
         <!-- Utilities -->
         <div v-if="auth.canViewReports || auth.canManageBackup || auth.canManageSettings" class="nav-section">Utilities

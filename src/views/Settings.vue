@@ -13,7 +13,8 @@ const cleanupOptions = reactive({
   cleanSales: false,
   cleanPurchases: false,
   cleanProducts: false,
-  cleanLogs: false
+  cleanLogs: false,
+  cleanExpenses: false
 });
 
 const settings = reactive({
@@ -60,7 +61,7 @@ async function saveSettings() {
 
 async function handleCleanup() {
   if (!cleanupOptions.cleanSales && !cleanupOptions.cleanPurchases &&
-    !cleanupOptions.cleanProducts && !cleanupOptions.cleanLogs) {
+    !cleanupOptions.cleanProducts && !cleanupOptions.cleanLogs && !cleanupOptions.cleanExpenses) {
     alert("Please select at least one option to clean.");
     return;
   }
@@ -227,6 +228,12 @@ onMounted(() => {
             <input v-model="cleanupOptions.cleanLogs" type="checkbox"
               class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
             <span class="text-gray-800 font-bold">Activity Logs</span>
+          </label>
+          <label
+            class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-red-100 cursor-pointer hover:bg-red-50/50 transition">
+            <input v-model="cleanupOptions.cleanExpenses" type="checkbox"
+              class="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300">
+            <span class="text-gray-800 font-bold">Expenses History</span>
           </label>
         </div>
 

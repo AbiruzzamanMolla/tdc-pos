@@ -106,9 +106,18 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             FOREIGN KEY(product_id) REFERENCES products(id)
         );
 
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            expense_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
-            value TEXT
+            value TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS users (

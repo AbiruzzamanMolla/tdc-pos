@@ -12,6 +12,7 @@ import Login from '../views/Login.vue'
 import Users from '../views/Users.vue'
 import ActivityLog from '../views/ActivityLog.vue'
 import Chat from '../views/Chat.vue'
+import Expenses from '../views/Expenses.vue'
 
 const routes = [
   { path: '/login', component: Login, name: 'Login', meta: { public: true } },
@@ -26,6 +27,7 @@ const routes = [
   { path: '/users', component: Users, name: 'Users', meta: { permission: 'canManageUsers' } },
   { path: '/activity-log', component: ActivityLog, name: 'ActivityLog', meta: { permission: 'canViewActivityLog' } },
   { path: '/chat', component: Chat, name: 'Chat' },
+  { path: '/expenses', component: Expenses, name: 'Expenses' },
 ]
 
 const router = createRouter({

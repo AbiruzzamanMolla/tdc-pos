@@ -206,3 +206,13 @@ pub struct ActivityLog {
     pub description: String,
     pub created_at: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Expense {
+    pub id: Option<i64>,
+    pub expense_date: Option<String>,
+    pub category: String,
+    pub amount: f64,
+    pub notes: Option<String>,
+    pub created_at: Option<String>,
+}

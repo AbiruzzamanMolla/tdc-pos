@@ -86,7 +86,17 @@ git push origin main
 git push origin --tags
 ```
 
+### 4.4 Publish GitHub Release
+
+After pushing tags, use the GitHub CLI to automate the release creation and upload the generated installer:
+
+```bash
+gh release create vx.x.x ./src-tauri/target/release/bundle/nsis/TDC-POS_x.x.x_x64-setup.exe \
+  --title "vx.x.x" \
+  --notes "Release vx.x.x"
+```
+
 ## 5. Deployment (Optional)
 
-- Upload the `.exe` installer from `src-tauri/target/release/bundle/nsis/` to your release page (e.g., GitHub Releases).
+- Confirm the `.exe` installer appears on the GitHub Releases page.
 - Notify users of the update.

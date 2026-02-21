@@ -11,6 +11,7 @@ const searchQuery = ref('');
 
 const salesData = ref([]);
 const inventoryData = ref([]);
+const expensesData = ref([]);
 const currencySymbol = ref('৳');
 const loading = ref(false);
 
@@ -24,8 +25,9 @@ const filteredSales = computed(() => {
     item.date.includes(q)
   );
 });
+const totalExpenses = computed(() => expensesData.value.reduce((sum, exp) => sum + exp.amount, 0));
 const totalSales = computed(() => filteredSales.value.reduce((sum, item) => sum + item.total, 0));
-const totalProfit = computed(() => filteredSales.value.reduce((sum, item) => sum + item.profit, 0));
+const totalProfit = computed(() => filteredSales.value.reduce((sum, item) => sum + item.profit, 0) - totalExpenses.value);
 const totalDiscount = computed(() => filteredSales.value.reduce((sum, item) => sum + item.discount, 0));
 const totalOrderCount = computed(() => filteredSales.value.length);
 const totalItemsSold = computed(() => filteredSales.value.reduce((sum, item) => sum + item.items_count, 0));
@@ -71,7 +73,12 @@ async function loadReport() {
   loading.value = true;
   try {
     if (currentTab.value === 'sales') {
-      salesData.value = await invoke('get_sales_report', { startDate: startDate.value, endDate: endDate.value });
+      const [sales, expenses] = await Promise.all([
+        invoke('get_sales_report', { startDate: startDate.value, endDate: endDate.value }),
+        invoke('get_expenses', { startDate: startDate.value, endDate: endDate.value })
+      ]);
+      salesData.value = sales;
+      expensesData.value = expenses;
     } else if (currentTab.value === 'inventory') {
       inventoryData.value = await invoke('get_inventory_report');
     }
@@ -95,7 +102,7 @@ function exportPDF() {
     doc.text(`Sales & Profit Report`, 14, 15);
     doc.setFontSize(9);
     doc.text(`Period: ${startDate.value} to ${endDate.value} | Generated: ${now}`, 14, 22);
-    doc.text(`Total Sales: ${currencySymbol.value}${totalSales.value.toFixed(2)} | Net Profit: ${currencySymbol.value}${totalProfit.value.toFixed(2)} | Orders: ${totalOrderCount.value} | Margin: ${profitMargin.value.toFixed(1)}%`, 14, 28);
+    doc.text(`Total Sales: ${currencySymbol.value}${totalSales.value.toFixed(2)} | Net Profit: ${currencySymbol.value}${totalProfit.value.toFixed(2)} | Expenses: ${currencySymbol.value}${totalExpenses.value.toFixed(2)} | Orders: ${totalOrderCount.value}`, 14, 28);
 
     autoTable(doc, {
       startY: 34,
@@ -199,17 +206,17 @@ onMounted(() => {
       <div class="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Total Revenue</div>
         <div class="text-xl font-black text-blue-800 mt-1">{{ currencySymbol }}{{ totalSales.toLocaleString(undefined,
-          { minimumFractionDigits: 2}) }}</div>
+          { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-green-50 border border-green-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-green-500 uppercase tracking-widest">Net Profit</div>
         <div class="text-xl font-black text-green-800 mt-1">{{ currencySymbol }}{{ totalProfit.toLocaleString(undefined,
-          { minimumFractionDigits: 2}) }}</div>
+          { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-amber-500 uppercase tracking-widest">Discounts Given</div>
         <div class="text-xl font-black text-amber-800 mt-1">{{ currencySymbol }}{{
-          totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2}) }}</div>
+          totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Total Orders</div>
@@ -218,6 +225,12 @@ onMounted(() => {
       <div class="bg-purple-50 border border-purple-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-purple-500 uppercase tracking-widest">Avg Order Value</div>
         <div class="text-xl font-black text-purple-800 mt-1">{{ currencySymbol }}{{ avgOrderValue.toFixed(2) }}</div>
+      </div>
+      <!-- Expenses Card -->
+      <div class="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-left">
+        <div class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Total Expenses</div>
+        <div class="text-xl font-black text-rose-800 mt-1">{{ currencySymbol }}{{
+          totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-teal-50 border border-teal-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-teal-500 uppercase tracking-widest">Profit Margin</div>
@@ -229,17 +242,17 @@ onMounted(() => {
       <div class="bg-purple-50 border border-purple-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-purple-500 uppercase tracking-widest">Cost Value</div>
         <div class="text-xl font-black text-purple-800 mt-1">{{ currencySymbol }}{{
-          totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2}) }}</div>
+          totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Retail Value</div>
         <div class="text-xl font-black text-blue-800 mt-1">{{ currencySymbol }}{{
-          totalRetailValue.toLocaleString(undefined, { minimumFractionDigits: 2}) }}</div>
+          totalRetailValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-green-50 border border-green-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-green-500 uppercase tracking-widest">Potential Profit</div>
         <div class="text-xl font-black text-green-800 mt-1">{{ currencySymbol }}{{
-          totalPotentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2}) }}</div>
+          totalPotentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-red-50 border border-red-100 p-4 rounded-2xl text-left">
         <div class="text-[10px] font-black text-red-500 uppercase tracking-widest">Out of Stock</div>
@@ -330,7 +343,7 @@ onMounted(() => {
               <td class="px-5 py-3.5">
                 <span v-if="item.category"
                   class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase">{{
-                  item.category }}</span>
+                    item.category }}</span>
                 <span v-else class="text-gray-300">—</span>
               </td>
               <td class="px-5 py-3.5 text-center">
@@ -345,7 +358,7 @@ onMounted(() => {
                 <span class="font-black text-xs"
                   :class="item.selling_price > item.cost_price ? 'text-green-600' : 'text-red-500'">
                   {{ item.cost_price > 0 ? (((item.selling_price - item.cost_price) / item.cost_price) * 100).toFixed(1)
-                  : '—' }}%
+                    : '—' }}%
                 </span>
               </td>
               <td class="px-5 py-3.5 text-right font-black text-purple-700">{{ currencySymbol }}{{

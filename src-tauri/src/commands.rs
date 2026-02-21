@@ -1,4 +1,4 @@
-use crate::models::{Product, Purchase, PurchaseItem, Order, OrderItem, DashboardStats, SalesReportItem, InventoryReportItem, User};
+use crate::models::{Product, Purchase, PurchaseItem, Order, OrderItem, DashboardStats, SalesReportItem, InventoryReportItem, User, Expense};
 use crate::db::Database;
 use tauri::{State, AppHandle, Manager};
 use rusqlite::params;
@@ -1322,12 +1322,93 @@ pub fn get_activity_logs(limit: i64, offset: i64, db: State<Database>) -> Result
     Ok(logs)
 }
 
+// --- Expenses ---
+#[tauri::command]
+pub fn create_expense(expense: Expense, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO expenses (expense_date, category, amount, notes) VALUES (?1, ?2, ?3, ?4)",
+        params![expense.expense_date, expense.category, expense.amount, expense.notes],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_expenses(start_date: Option<String>, end_date: Option<String>, db: State<Database>) -> Result<Vec<Expense>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let mut query = "SELECT id, expense_date, category, amount, notes, created_at FROM expenses".to_string();
+    let mut has_where = false;
+    
+    if start_date.is_some() && end_date.is_some() {
+        query.push_str(" WHERE date(expense_date) >= date(?1) AND date(expense_date) <= date(?2)");
+        has_where = true;
+    }
+    query.push_str(" ORDER BY expense_date DESC");
+
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+    
+    let mut expenses = Vec::new();
+
+    if start_date.is_some() && end_date.is_some() {
+        let expense_iter = stmt.query_map(params![start_date.unwrap(), end_date.unwrap()], |row| {
+            Ok(Expense {
+                id: row.get(0)?,
+                expense_date: row.get(1)?,
+                category: row.get(2)?,
+                amount: row.get(3)?,
+                notes: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        }).map_err(|e| e.to_string())?;
+
+        for exp_res in expense_iter {
+            expenses.push(exp_res.map_err(|e| e.to_string())?);
+        }
+    } else {
+        let expense_iter = stmt.query_map([], |row| {
+            Ok(Expense {
+                id: row.get(0)?,
+                expense_date: row.get(1)?,
+                category: row.get(2)?,
+                amount: row.get(3)?,
+                notes: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        }).map_err(|e| e.to_string())?;
+
+        for exp_res in expense_iter {
+            expenses.push(exp_res.map_err(|e| e.to_string())?);
+        }
+    }
+    
+    Ok(expenses)
+}
+
+#[tauri::command]
+pub fn update_expense(id: i64, expense: Expense, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE expenses SET expense_date = ?1, category = ?2, amount = ?3, notes = ?4 WHERE id = ?5",
+        params![expense.expense_date, expense.category, expense.amount, expense.notes, id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_expense(id: i64, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM expenses WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn cleanup_database(
     clean_sales: bool, 
     clean_purchases: bool, 
     clean_products: bool, 
     clean_logs: bool, 
+    clean_expenses: bool,
     db: State<Database>
 ) -> Result<(), String> {
     let mut conn = db.conn.lock().map_err(|e| e.to_string())?;
@@ -1357,6 +1438,10 @@ pub fn cleanup_database(
             tx.execute("DELETE FROM purchase_items", []).map_err(|e| e.to_string())?;
             tx.execute("DELETE FROM purchases", []).map_err(|e| e.to_string())?;
         }
+    }
+
+    if clean_expenses {
+        tx.execute("DELETE FROM expenses", []).map_err(|e| e.to_string())?;
     }
 
     if clean_logs {

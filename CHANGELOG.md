@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.9] - 2026-02-22
+
+### Added
+
+- **Expense Tracking Feature**: Track operational costs via the new `Expenses` page.
+- **Reports Module**: Auto-calculates expenses and derives True Net Profit.
+- **Database Utilities**: Expenses table included in database clearing logic in Settings.
+- **Release Automation**: Integrated GitHub CLI to auto publish setup executables on tag push.
+
 ## [0.17.8] - 2026-02-22
 
 ### Added

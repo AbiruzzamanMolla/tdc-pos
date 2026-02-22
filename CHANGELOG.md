@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.0] - 2026-02-22
+
+### Added
+
+- **Fraud Checker**: Added a Fraud Checker tool to the Executive Dashboard that allows checking phone numbers via API and displaying the results.
+
 ## [0.17.9] - 2026-02-22
 
 ### Added

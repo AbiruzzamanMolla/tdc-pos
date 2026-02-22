@@ -1,3 +1,3 @@
 // Centralized version number — single source of truth
-export const APP_VERSION = "0.17.9";
+export const APP_VERSION = "0.18.0";
 export const APP_NAME = 'TDC-POS';

@@ -7,6 +7,42 @@ import { useI18nStore } from '../stores/i18n';
 const auth = useAuthStore();
 const i18n = useI18nStore();
 
+const showFraudChecker = ref(false);
+const fraudPhone = ref('');
+const fraudResult = ref(null);
+const isLoadingFraud = ref(false);
+const fraudError = ref(null);
+
+async function checkFraud() {
+  if (!fraudPhone.value.trim()) return;
+  
+  isLoadingFraud.value = true;
+  fraudError.value = null;
+  fraudResult.value = null;
+  
+  try {
+    const formData = new FormData();
+    formData.append('phone', fraudPhone.value.trim());
+    
+    const response = await fetch('https://audiobookbangla.com/api/v2/check-fraud', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    fraudResult.value = data;
+  } catch (error) {
+    fraudError.value = error.message || 'An error occurred while checking fraud';
+    console.error("Fraud check failed:", error);
+  } finally {
+    isLoadingFraud.value = false;
+  }
+}
+
 const stats = ref({
   sales_today: 0, sales_month: 0, sales_year: 0, total_sales: 0,
   purchases_today: 0, purchases_month: 0, purchases_year: 0, total_purchases: 0,
@@ -46,6 +82,11 @@ onMounted(() => {
         <p class="text-gray-500 font-medium">{{ i18n.t('precision_analytics') }}</p>
       </div>
       <div class="flex gap-3 self-end sm:self-auto">
+        <!-- Fraud Checker Button -->
+        <button @click="showFraudChecker = true"
+          class="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all active:scale-95 border border-red-100 shadow-sm flex items-center gap-2">
+          <span>🛡️</span> Fraud Checker
+        </button>
         <!-- Language Switcher -->
         <button @click="i18n.toggleLocale"
           class="bg-blue-50 text-blue-600 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 border border-blue-100 shadow-sm">
@@ -271,6 +312,51 @@ onMounted(() => {
           <div class="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">{{ i18n.t('last_updated') }}
           </div>
           <div class="text-xs text-gray-400 font-mono">{{ new Date().toLocaleTimeString() }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fraud Checker Modal -->
+    <div v-if="showFraudChecker" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h2 class="text-xl font-black text-gray-900 flex items-center gap-2">
+            <span>🛡️</span> {{ i18n.t('fraud_checker') || 'Fraud Checker' }}
+          </h2>
+          <button @click="showFraudChecker = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6">
+          <div class="flex gap-4">
+            <input 
+              v-model="fraudPhone" 
+              @keyup.enter="checkFraud"
+              type="text" 
+              placeholder="Enter Phone Number..." 
+              class="flex-1 bg-white border-2 border-gray-200 text-gray-900 text-base rounded-2xl focus:ring-0 focus:border-blue-500 block w-full p-4 font-bold transition-all shadow-sm"
+            >
+            <button 
+              @click="checkFraud" 
+              :disabled="isLoadingFraud || !fraudPhone.trim()"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-blue-500"
+            >
+              <span v-if="isLoadingFraud" class="animate-spin text-base">⏳</span>
+              <span v-else class="text-base">🔍</span>
+              Check
+            </button>
+          </div>
+
+          <div v-if="fraudError" class="p-4 bg-red-50 text-red-600 rounded-2xl font-medium border border-red-100">
+            {{ fraudError }}
+          </div>
+
+          <div v-if="fraudResult" class="bg-gray-900 rounded-3xl p-6 overflow-x-auto shadow-inner w-full">
+            <pre class="text-sm font-mono text-green-400 leading-relaxed whitespace-pre-wrap">{{ JSON.stringify(fraudResult, null, 2) }}</pre>
+          </div>
         </div>
       </div>
     </div>

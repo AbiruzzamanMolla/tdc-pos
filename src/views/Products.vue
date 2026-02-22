@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
 
@@ -199,7 +199,8 @@ async function saveProduct() {
 }
 
 async function deleteProduct(id) {
-  if (!confirm("Are you sure you want to delete this product?")) return;
+  const isConfirmed = await confirm("Are you sure you want to delete this product?", { kind: 'warning' });
+  if (!isConfirmed) return;
   try {
     await invoke('delete_product', { id });
     await logActivity('DELETE', 'Product', id, `Deleted product #${id}`);

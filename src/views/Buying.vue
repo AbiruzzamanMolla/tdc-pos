@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
+import { confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
 
@@ -245,7 +246,8 @@ async function viewPurchaseDetails(purchase) {
 }
 
 async function deletePurchase(purchase) {
-  if (!confirm(`Are you sure you want to delete this buying entry? It will reverse stock quantities.`)) return;
+  const isConfirmed = await confirm(`Are you sure you want to delete this buying entry? It will reverse stock quantities.`, { kind: 'warning' });
+  if (!isConfirmed) return;
   try {
     await invoke('delete_purchase', { purchaseId: purchase.purchase_id });
     await logActivity('DELETE', 'Purchase', purchase.purchase_id, `Deleted purchase #${purchase.purchase_id} from ${purchase.supplier_name || 'Unknown'}`);

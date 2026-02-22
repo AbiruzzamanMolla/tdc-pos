@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.1] - 2026-02-22
+
+### Fixed
+
+- **Delete Confirmations**: Replaced native browser `window.confirm` with non-blocking Tauri `@tauri-apps/plugin-dialog` to prevent instant deletions due to asynchronous yielding in WebView2.
+
 ## [0.18.0] - 2026-02-22
 
 ### Added

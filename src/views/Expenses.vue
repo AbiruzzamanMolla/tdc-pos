@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { confirm } from '@tauri-apps/plugin-dialog';
 import { logActivity } from '../utils/activityLogger';
 
 const expenses = ref([]);
@@ -118,7 +119,8 @@ function editExpense(expense) {
 }
 
 async function deleteExpense(id) {
-    if (!confirm("Are you sure you want to delete this expense record?")) return;
+    const isConfirmed = await confirm("Are you sure you want to delete this expense record?", { kind: 'warning' });
+    if (!isConfirmed) return;
 
     try {
         loading.value = true;

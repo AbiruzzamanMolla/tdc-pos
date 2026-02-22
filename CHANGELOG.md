@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.2] - 2026-02-22
+
+### Changed
+
+- **Fraud Checker UI**: Improved the user interface for the Fraud Checker in the Dashboard. Percentage calculations are now shown for genuine and fraudulent customers based on previous courier delivery histories. Dashboard labels updated to Banglish.
+
 ## [0.18.1] - 2026-02-22
 
 ### Fixed

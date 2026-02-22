@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { useAuthStore } from '../stores/auth';
 import { useI18nStore } from '../stores/i18n';
@@ -12,6 +12,35 @@ const fraudPhone = ref('');
 const fraudResult = ref(null);
 const isLoadingFraud = ref(false);
 const fraudError = ref(null);
+
+const fraudStats = computed(() => {
+  if (!fraudResult.value || !fraudResult.value.data || !fraudResult.value.data.couriers) return null;
+  const couriers = fraudResult.value.data.couriers;
+  let totalSuccess = 0;
+  let totalCancel = 0;
+  let totalOrders = 0;
+  
+  for (const [name, data] of Object.entries(couriers)) {
+    if (!data.error) {
+      totalSuccess += data.success || 0;
+      totalCancel += data.cancel || 0;
+      totalOrders += data.total || 0;
+    }
+  }
+
+  const hasData = totalOrders > 0;
+  const successPercentage = hasData ? Math.round((totalSuccess / totalOrders) * 100) : 0;
+  const cancelPercentage = hasData ? Math.round((totalCancel / totalOrders) * 100) : 0;
+
+  return {
+    totalSuccess,
+    totalCancel,
+    totalOrders,
+    successPercentage,
+    cancelPercentage,
+    hasData
+  };
+});
 
 async function checkFraud() {
   if (!fraudPhone.value.trim()) return;
@@ -85,7 +114,7 @@ onMounted(() => {
         <!-- Fraud Checker Button -->
         <button @click="showFraudChecker = true"
           class="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all active:scale-95 border border-red-100 shadow-sm flex items-center gap-2">
-          <span>🛡️</span> Fraud Checker
+          <span>🛡️</span> Fraud Check / ফ্রড চেক
         </button>
         <!-- Language Switcher -->
         <button @click="i18n.toggleLocale"
@@ -322,7 +351,7 @@ onMounted(() => {
         <!-- Header -->
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 class="text-xl font-black text-gray-900 flex items-center gap-2">
-            <span>🛡️</span> {{ i18n.t('fraud_checker') || 'Fraud Checker' }}
+            <span>🛡️</span> {{ i18n.t('fraud_checker') || 'Fraud Check / ফ্রড চেক' }}
           </h2>
           <button @click="showFraudChecker = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -354,8 +383,72 @@ onMounted(() => {
             {{ fraudError }}
           </div>
 
-          <div v-if="fraudResult" class="bg-gray-900 rounded-3xl p-6 overflow-x-auto shadow-inner w-full">
-            <pre class="text-sm font-mono text-green-400 leading-relaxed whitespace-pre-wrap">{{ JSON.stringify(fraudResult, null, 2) }}</pre>
+          <div v-if="fraudResult && !fraudResult.success" class="p-4 bg-red-50 text-red-600 rounded-2xl font-medium border border-red-100">
+            {{ fraudResult.message || 'Unknown error occurred' }}
+          </div>
+
+          <div v-else-if="fraudResult && fraudResult.success" class="flex flex-col gap-6 w-full animate-in fade-in duration-300">
+            <!-- Overall Probability -->
+            <div v-if="fraudStats && fraudStats.hasData" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl shadow-sm text-left">
+                  <h4 class="text-emerald-700 text-xs font-black uppercase tracking-widest mb-2">Genuine Customer Probability</h4>
+                  <div class="text-5xl font-black text-emerald-600 mb-2">{{ fraudStats.successPercentage }}%</div>
+                  <div class="text-sm font-bold text-emerald-800 mt-2">Successful Deliveries: {{ fraudStats.totalSuccess }} / {{ fraudStats.totalOrders }}</div>
+                  
+                  <!-- progress bar equivalent -->
+                  <div class="w-full bg-white rounded-full h-2 mt-4 overflow-hidden border border-emerald-100">
+                    <div class="bg-emerald-500 h-2 rounded-full transition-all duration-1000" :style="`width: ${fraudStats.successPercentage}%`"></div>
+                  </div>
+              </div>
+              <div class="bg-red-50 border border-red-100 p-6 rounded-3xl shadow-sm text-left">
+                  <h4 class="text-red-700 text-xs font-black uppercase tracking-widest mb-2">Fraud Probability</h4>
+                  <div class="text-5xl font-black text-red-600 mb-2">{{ fraudStats.cancelPercentage }}%</div>
+                  <div class="text-sm font-bold text-red-800 mt-2">Cancelled Orders: {{ fraudStats.totalCancel }} / {{ fraudStats.totalOrders }}</div>
+                  
+                  <!-- progress bar equivalent -->
+                  <div class="w-full bg-white rounded-full h-2 mt-4 overflow-hidden border border-red-100">
+                    <div class="bg-red-500 h-2 rounded-full transition-all duration-1000" :style="`width: ${fraudStats.cancelPercentage}%`"></div>
+                  </div>
+              </div>
+            </div>
+            
+            <div v-else-if="fraudStats && !fraudStats.hasData" class="p-6 bg-blue-50 text-blue-700 rounded-3xl font-bold border border-blue-100 text-center shadow-sm">
+              No delivery history found for this number.
+            </div>
+
+            <!-- Courier Details -->
+            <div v-if="fraudResult.data && fraudResult.data.couriers" class="bg-gray-50 rounded-3xl p-6 border border-gray-100 shadow-inner">
+              <h3 class="text-gray-900 font-black uppercase tracking-widest mb-4 text-xs border-b border-gray-200 pb-3 text-left">Courier breakdown</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <template v-for="(data, name) in fraudResult.data.couriers" :key="name">
+                  <div class="bg-white p-5 rounded-2xl shadow-sm border transition-all hover:shadow-md text-left" :class="data.error ? 'border-red-200' : 'border-gray-200'">
+                    <div class="text-[10px] font-black uppercase tracking-widest mb-3 text-gray-500 flex justify-between items-center">
+                      <span>{{ name }}</span>
+                      <span v-if="data.error" class="text-red-500 text-sm" title="Data fetch error">⚠️ Error</span>
+                      <span v-else class="text-green-500 text-sm">✅ OK</span>
+                    </div>
+                    
+                    <div v-if="data.error" class="text-xs font-bold text-red-500 bg-red-50 p-2 rounded-lg">
+                      {{ data.error }}
+                    </div>
+                    <div v-else class="space-y-3">
+                      <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Total</span>
+                        <span class="font-black text-gray-900">{{ data.total }}</span>
+                      </div>
+                      <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-emerald-600 font-bold text-xs uppercase tracking-wider">Success</span>
+                        <span class="font-black text-emerald-700">{{ data.success }}</span>
+                      </div>
+                      <div class="flex justify-between items-center text-sm">
+                        <span class="text-red-600 font-bold text-xs uppercase tracking-wider">Cancelled</span>
+                        <span class="font-black text-red-700">{{ data.cancel }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>

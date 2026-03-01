@@ -86,8 +86,9 @@ function logout() {
             TDC-POS</h1>
         </div>
         <!-- Mobile Close Button -->
-        <button v-if="isMobile" @click="isSidebarOpen = false" class="text-gray-400 hover:text-white">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button v-if="isMobile" @click.stop="isSidebarOpen = false" type="button"
+          class="text-gray-400 hover:text-white p-3 -mr-3 rounded-full active:bg-white/10 transition-colors z-50">
+          <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>

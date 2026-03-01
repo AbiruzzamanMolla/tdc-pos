@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import { readFile, writeFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { logActivity } from '../utils/activityLogger';
 
 const loading = ref(false);
@@ -109,7 +110,13 @@ async function restoreBackup(path) {
 
   try {
     loading.value = true;
-    await invoke('restore_db', { sourcePath: path });
+
+    // Read the file using Tauri plugin-fs which handles Android content URIs natively
+    const contents = await readFile(path);
+
+    // Write directly to the appData directory using BaseDirectory
+    await writeFile('tdc-pos.db', contents, { baseDir: BaseDirectory.AppData });
+
     await logActivity('RESTORE', 'Backup', null, `Database restored from: ${path}`);
     showStatus('Database restored! Please restart the application.');
   } catch (error) {

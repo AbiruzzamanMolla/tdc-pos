@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { readFile, writeFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { readFile, writeFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { logActivity } from '../utils/activityLogger';
 
 const loading = ref(false);
@@ -87,7 +87,16 @@ async function runManualBackup() {
     }
 
     if (dest) {
-      await invoke('backup_db', { destinationPath: dest });
+      try {
+        await invoke('backup_db', { destinationPath: dest });
+      } catch (backupError) {
+        // Fallback for Android Content URIs or restricted file systems
+        await invoke('backup_db', { destinationPath: "INTERNAL_TEMP" });
+        const bytes = await readFile('temp_backup.db', { baseDir: BaseDirectory.AppData });
+        await writeFile(dest, bytes);
+        await remove('temp_backup.db', { baseDir: BaseDirectory.AppData }).catch(e => console.warn(e));
+      }
+
       if (backupSettings.value.backup_dir) {
         await invoke('prune_backups', {
           directory: backupSettings.value.backup_dir,

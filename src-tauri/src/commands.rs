@@ -586,10 +586,22 @@ pub fn get_inventory_report(db: State<Database>) -> Result<Vec<InventoryReportIt
 }
 
 #[tauri::command]
-pub fn backup_db(destination_path: String, db: State<Database>) -> Result<(), String> {
+pub fn backup_db(destination_path: String, app_handle: AppHandle, db: State<Database>) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     
-    conn.execute_batch(&format!("VACUUM INTO '{}'", destination_path))
+    let path_to_use = if destination_path == "INTERNAL_TEMP" {
+        let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+        app_dir.join("temp_backup.db").to_string_lossy().to_string()
+    } else {
+        destination_path
+    };
+
+    if path_to_use.ends_with("temp_backup.db") {
+        let _ = std::fs::remove_file(&path_to_use);
+    }
+    
+    let safe_path = path_to_use.replace("'", "''");
+    conn.execute_batch(&format!("VACUUM INTO '{}'", safe_path))
         .map_err(|e| format!("Backup failed: {}", e))?;
     
     Ok(())
@@ -654,7 +666,7 @@ pub fn prune_backups(directory: String, keep_n: usize) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn check_and_auto_backup(db: State<'_, Database>) -> Result<(), String> {
+pub async fn check_and_auto_backup(app_handle: AppHandle, db: State<'_, Database>) -> Result<(), String> {
     let settings = get_settings(db.clone())?;
     
     let is_enabled = settings.get("auto_backup").map(|v| v == "true").unwrap_or(false);
@@ -688,7 +700,7 @@ pub async fn check_and_auto_backup(db: State<'_, Database>) -> Result<(), String
         let name = format!("tdc-pos-auto-{}.db", timestamp);
         let path = std::path::Path::new(backup_dir).join(name);
         
-        backup_db(path.to_string_lossy().to_string(), db.clone())?;
+        backup_db(path.to_string_lossy().to_string(), app_handle, db.clone())?;
         prune_backups(backup_dir.clone(), keep_n)?;
         
         // Update last backup date

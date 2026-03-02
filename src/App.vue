@@ -4,6 +4,8 @@ import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { computed, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { readFile, writeFile, readDir, remove, BaseDirectory, exists } from '@tauri-apps/plugin-fs';
+import JSZip from 'jszip';
 import { APP_VERSION } from './version'
 import FloatingCalculator from './components/FloatingCalculator.vue'
 
@@ -22,11 +24,69 @@ onMounted(async () => {
 
   theme.initTheme();
   try {
-    await invoke('check_and_auto_backup');
+    await runAutoBackup();
   } catch (err) {
     console.error("Auto-backup failed", err);
   }
 });
+
+async function runAutoBackup() {
+  try {
+    const s = await invoke('get_settings');
+    if (s.auto_backup !== 'true' || !s.backup_dir) return;
+
+    const schedule = s.backup_schedule || 'daily';
+    const keepBackups = parseInt(s.keep_backups || '5');
+    const lastBackup = s.last_auto_backup_date;
+
+    const now = new Date();
+    const nowStr = now.toISOString().split('T')[0];
+
+    let shouldBackup = false;
+    if (!lastBackup) {
+      shouldBackup = true;
+    } else {
+      shouldBackup = lastBackup !== nowStr;
+    }
+
+    if (shouldBackup) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `tdc-pos-auto-${timestamp}.zip`;
+      const dest = `${s.backup_dir}/${filename}`;
+
+      await invoke('backup_db', { destinationPath: "INTERNAL_TEMP" });
+      const dbBytes = await readFile('temp_backup.db', { baseDir: BaseDirectory.AppData });
+
+      const zip = new JSZip();
+      zip.file('backup.db', dbBytes);
+
+      try {
+        const hasImages = await exists('images', { baseDir: BaseDirectory.AppData });
+        if (hasImages) {
+          const imageEntries = await readDir('images', { baseDir: BaseDirectory.AppData });
+          const imgFolder = zip.folder('images');
+          for (const entry of imageEntries) {
+            if (entry.isFile) {
+              const imgBytes = await readFile(`images/${entry.name}`, { baseDir: BaseDirectory.AppData });
+              imgFolder.file(entry.name, imgBytes);
+            }
+          }
+        }
+      } catch(e) {
+        console.warn("Images auto-backup skipped/failed", e);
+      }
+
+      const zipBytes = await zip.generateAsync({ type: 'uint8array', compression: "DEFLATE" });
+      await writeFile(dest, zipBytes);
+      await remove('temp_backup.db', { baseDir: BaseDirectory.AppData }).catch(() => {});
+
+      await invoke('prune_backups', { directory: s.backup_dir, keepN: keepBackups });
+      await invoke('update_settings', { settings: { "last_auto_backup_date": nowStr } });
+    }
+  } catch (err) {
+    console.error("Auto backup failed in JS", err);
+  }
+}
 
 function handleResize() {
   const wasMobile = isMobile.value

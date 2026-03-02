@@ -65,7 +65,6 @@ pub fn run() {
             commands::delete_user,
             commands::list_backups,
             commands::prune_backups,
-            commands::check_and_auto_backup,
             commands::get_product_purchase_history,
             commands::get_product_stock_history,
             commands::check_setup_required,

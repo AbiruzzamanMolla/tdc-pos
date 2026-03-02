@@ -5,6 +5,9 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { readFile, writeFile, remove, readDir, BaseDirectory, exists, mkdir } from '@tauri-apps/plugin-fs';
 import { logActivity } from '../utils/activityLogger';
 import JSZip from 'jszip';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 const loading = ref(false);
 const statusMessage = ref('');
@@ -54,6 +57,10 @@ async function loadSettings() {
 }
 
 async function updateSetting(key, value) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot update backup settings.");
+    return;
+  }
   try {
     await invoke('update_settings', { settings: { [key]: value.toString() } });
   } catch (err) {
@@ -72,6 +79,10 @@ async function selectBackupDir() {
 }
 
 async function runManualBackup() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot create backups.");
+    return;
+  }
   try {
     loading.value = true;
     const now = new Date().toISOString().replace(/[:.]/g, '-');
@@ -136,6 +147,10 @@ async function runManualBackup() {
 }
 
 async function restoreBackup(path) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot restore from backup.");
+    return;
+  }
   if (!confirm("⚠️ RESTORE DATABASE AND IMAGES?\n\nThis will OVERWRITE your current data with the selected backup.\nThe app will restart after restore.\n\nAre you sure?")) return;
 
   try {
@@ -205,7 +220,7 @@ onMounted(loadSettings);
         <h1 class="text-3xl font-black text-gray-900 tracking-tight">Backup & Restore</h1>
         <p class="text-gray-400 text-sm font-medium">Protect your business data</p>
       </div>
-      <button @click="runManualBackup" :disabled="loading"
+      <button v-if="!auth.isDemo" @click="runManualBackup" :disabled="loading"
         class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-2xl shadow-lg shadow-blue-500/20 transition-all font-bold text-sm disabled:opacity-50 active:scale-95 flex items-center gap-2">
         <span v-if="!loading">💾</span>
         <span v-else class="animate-spin">⏳</span>
@@ -337,7 +352,7 @@ onMounted(loadSettings);
                     formatSize(b.size) }}</span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <button @click="restoreBackup(b.path)" :disabled="loading"
+                  <button v-if="!auth.isDemo" @click="restoreBackup(b.path)" :disabled="loading"
                     class="text-xs font-black text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest bg-gray-50 hover:bg-red-50 px-3 py-1.5 rounded-lg disabled:opacity-50">
                     Restore
                   </button>

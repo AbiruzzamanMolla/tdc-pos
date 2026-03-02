@@ -5,6 +5,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 const viewMode = ref('new');
 const purchases = ref([]);
@@ -149,6 +152,11 @@ function removeFromCart(index) {
 }
 
 async function savePurchase() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot save purchases.");
+    return;
+  }
+
   if (cart.value.length === 0) {
     alert("Please add at least one product.");
     return;
@@ -246,6 +254,10 @@ async function viewPurchaseDetails(purchase) {
 }
 
 async function deletePurchase(purchase) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot delete purchases.");
+    return;
+  }
   const isConfirmed = await confirm(`Are you sure you want to delete this buying entry? It will reverse stock quantities.`, { kind: 'warning' });
   if (!isConfirmed) return;
   try {
@@ -286,7 +298,7 @@ onMounted(() => {
         {{ viewMode === 'new' ? 'Product Procurement' : 'Procurement History' }}
       </h1>
       <div class="bg-gray-100 p-1 rounded-xl flex text-sm font-bold shadow-inner">
-        <button @click="viewMode = 'new'"
+        <button v-if="!auth.isDemo" @click="viewMode = 'new'"
           :class="{ 'bg-white shadow-sm text-blue-600': viewMode === 'new', 'text-gray-500 hover:text-gray-700': viewMode !== 'new' }"
           class="px-6 py-2 rounded-lg transition-all active:scale-95">
           New Purchase
@@ -550,11 +562,11 @@ onMounted(() => {
             <td class="p-4 text-gray-400 text-xs italic truncate max-w-[150px]">{{ purchase.notes || '—' }}</td>
             <td class="p-4 text-center">
               <div class="flex justify-center gap-2">
-                <button @click="editPurchase(purchase)"
+                <button v-if="!auth.isDemo" @click="editPurchase(purchase)"
                   class="bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Edit</button>
                 <button @click="viewPurchaseDetails(purchase)"
                   class="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Details</button>
-                <button @click="deletePurchase(purchase)"
+                <button v-if="!auth.isDemo" @click="deletePurchase(purchase)"
                   class="bg-white text-red-400 hover:bg-red-500 hover:text-white border border-red-50 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Delete</button>
               </div>
             </td>

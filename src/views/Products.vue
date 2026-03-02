@@ -5,6 +5,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { open, confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 
 const products = ref([]);
@@ -159,6 +162,11 @@ function removeImage(index) {
 }
 
 async function saveProduct() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot save products.");
+    return;
+  }
+  
   try {
     const productData = {
       id: form.value.id,
@@ -199,6 +207,11 @@ async function saveProduct() {
 }
 
 async function deleteProduct(product) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot delete products.");
+    return;
+  }
+
   if (product.stock_quantity > 0) {
     alert("Cannot delete product: stock is currently available. Please empty stock first.");
     return;
@@ -247,7 +260,7 @@ onMounted(() => {
   <div class="h-full flex flex-col space-y-4">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Products</h1>
-      <button @click="openModal()"
+      <button v-if="!auth.isDemo" @click="openModal()"
         class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2">
         + Add Product
       </button>
@@ -356,7 +369,7 @@ onMounted(() => {
                   </svg>
                   <span class="sr-only sm:not-sr-only">View</span>
                 </button>
-                <button @click="openModal(product)"
+                <button v-if="!auth.isDemo" @click="openModal(product)"
                   class="flex-1 flex justify-center items-center gap-1.5 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold transition-colors border border-blue-200"
                   title="Edit">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -366,7 +379,7 @@ onMounted(() => {
                   </svg>
                   <span class="sr-only sm:not-sr-only">Edit</span>
                 </button>
-                <button @click="deleteProduct(product)"
+                <button v-if="!auth.isDemo" @click="deleteProduct(product)"
                   class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg transition-colors border border-red-200"
                   title="Delete">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"

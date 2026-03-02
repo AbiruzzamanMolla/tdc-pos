@@ -21,7 +21,8 @@ const roles = [
     { value: 'sell_manager', label: 'Sell Manager' },
     { value: 'report_checker', label: 'Report Checker' },
     { value: 'inspector', label: 'Inspector' },
-    { value: 'worker', label: 'Worker' }
+    { value: 'worker', label: 'Worker' },
+    { value: 'demo', label: 'Demo' }
 ];
 
 const form = reactive({ username: '', password: '', role: 'worker' });
@@ -174,7 +175,8 @@ function getRoleBadgeClass(role) {
         'sell_manager': 'bg-orange-100 text-orange-700',
         'report_checker': 'bg-teal-100 text-teal-700',
         'inspector': 'bg-cyan-100 text-cyan-700',
-        'worker': 'bg-gray-100 text-gray-600'
+        'worker': 'bg-gray-100 text-gray-600',
+        'demo': 'bg-pink-100 text-pink-700',
     };
     return map[role] || 'bg-gray-100 text-gray-600';
 }

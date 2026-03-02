@@ -637,7 +637,7 @@ pub fn list_backups(directory: String) -> Result<Vec<crate::models::BackupInfo>,
         
         if metadata.is_file() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.ends_with(".db") || name.ends_with(".bak") {
+            if name.ends_with(".db") || name.ends_with(".bak") || name.ends_with(".zip") {
                 backups.push(crate::models::BackupInfo {
                     name,
                     path: entry.path().to_string_lossy().to_string(),
@@ -665,50 +665,6 @@ pub fn prune_backups(directory: String, keep_n: usize) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-pub async fn check_and_auto_backup(app_handle: AppHandle, db: State<'_, Database>) -> Result<(), String> {
-    let settings = get_settings(db.clone())?;
-    
-    let is_enabled = settings.get("auto_backup").map(|v| v == "true").unwrap_or(false);
-    if !is_enabled { return Ok(()); }
-    
-    let backup_dir = settings.get("backup_dir");
-    if backup_dir.is_none() || backup_dir.unwrap().is_empty() { return Ok(()); }
-    let backup_dir = backup_dir.unwrap();
-
-    let schedule = settings.get("backup_schedule").map(|v| v.as_str()).unwrap_or("daily");
-    let keep_n = settings.get("keep_backups").and_then(|v| v.parse::<usize>().ok()).unwrap_or(5);
-    
-    let last_backup = settings.get("last_auto_backup_date");
-    let now = chrono::Local::now();
-    let now_str = now.format("%Y-%m-%d").to_string();
-
-    let should_backup = match last_backup {
-        Some(date) => {
-            if schedule == "daily" {
-                date != &now_str
-            } else {
-                // weekly - check if it's been 7 days or different week
-                date != &now_str // simple check for now, can be improved
-            }
-        },
-        None => true
-    };
-
-    if should_backup {
-        let timestamp = now.format("%Y-%m-%d-%H-%M-%S").to_string();
-        let name = format!("tdc-pos-auto-{}.db", timestamp);
-        let path = std::path::Path::new(backup_dir).join(name);
-        
-        backup_db(path.to_string_lossy().to_string(), app_handle, db.clone())?;
-        prune_backups(backup_dir.clone(), keep_n)?;
-        
-        // Update last backup date
-        update_settings(HashMap::from([("last_auto_backup_date".to_string(), now_str)]), db)?;
-    }
-
-    Ok(())
-}
 
 #[tauri::command]
 pub fn get_settings(db: State<Database>) -> Result<HashMap<String, String>, String> {

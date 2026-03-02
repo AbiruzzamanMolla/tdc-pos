@@ -41,6 +41,10 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot save settings.");
+    return;
+  }
   loading.value = true;
   message.value = "";
 
@@ -180,7 +184,7 @@ onMounted(() => {
             </div>
             <div v-else></div> <!-- Spacer -->
 
-            <button @click="saveSettings" :disabled="loading"
+            <button v-if="!auth.isDemo" @click="saveSettings" :disabled="loading"
               class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-lg shadow-lg transition disabled:opacity-50 w-full sm:w-auto text-sm sm:text-base">
               {{ loading ? 'Saving...' : 'Save Settings' }}
             </button>

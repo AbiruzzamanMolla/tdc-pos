@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.18.8] - 2026-03-02
+
+### Added
+
+- **Demo Role**: Added a new 'Demo' view-only admin role that can view all operations but cannot add, edit, or delete any data.
+
+### Fixed
+
+- **Backup Listing**: Fixed the backup history to display current `.zip` backup archives instead of old `.db` backups.
+
 ## [0.18.7] - 2026-03-02
 
 ### Added

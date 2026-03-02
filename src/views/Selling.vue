@@ -5,6 +5,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 const viewMode = ref('pos');
 const products = ref([]);
@@ -117,6 +120,10 @@ async function viewOrderDetails(order) {
 }
 
 async function deleteOrder(order) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot delete sales.");
+    return;
+  }
   const isConfirmed = await confirm(`Are you sure you want to delete Sale #${order.order_id}? This will restore stock quantities.`, { kind: 'warning' });
   if (!isConfirmed) return;
   try {
@@ -201,6 +208,10 @@ function openCheckout() {
 }
 
 async function processOrder() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot save sales.");
+    return;
+  }
   try {
     const orderData = {
       order_date: new Date().toISOString(),
@@ -328,7 +339,7 @@ onMounted(() => {
         {{ viewMode === 'pos' ? 'Selling' : 'Sales History' }}
       </h1>
       <div class="bg-gray-200 p-1 rounded-lg flex text-sm font-medium">
-        <button @click="viewMode = 'pos'"
+        <button v-if="!auth.isDemo" @click="viewMode = 'pos'"
           :class="{ 'bg-white shadow text-blue-600': viewMode === 'pos', 'text-gray-500 hover:text-gray-700': viewMode !== 'pos' }"
           class="px-4 py-2 rounded-md transition-all">
           New Sale
@@ -506,11 +517,11 @@ onMounted(() => {
             </td>
             <td class="p-3 text-center">
               <div class="flex justify-center gap-1">
-                <button @click="editOrder(order)"
+                <button v-if="!auth.isDemo" @click="editOrder(order)"
                   class="text-emerald-600 hover:text-emerald-800 text-xs font-medium border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50">Edit</button>
                 <button @click="viewOrderDetails(order)"
                   class="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">View</button>
-                <button @click="deleteOrder(order)"
+                <button v-if="!auth.isDemo" @click="deleteOrder(order)"
                   class="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 px-2 py-1 rounded hover:bg-red-50">Delete</button>
               </div>
             </td>

@@ -13,15 +13,17 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Specific permissions
   const canManageUsers = computed(() => ['super_admin', 'admin'].includes(role.value));
-  const canManageSettings = computed(() => ['super_admin', 'admin'].includes(role.value));
-  const canManageBackup = computed(() => ['super_admin', 'admin'].includes(role.value));
+  const canManageSettings = computed(() => ['super_admin', 'admin', 'demo'].includes(role.value));
+  const canManageBackup = computed(() => ['super_admin', 'admin', 'demo'].includes(role.value));
   
   const canBuy = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager'].includes(role.value));
   const canSell = computed(() => ['super_admin', 'admin', 'manager', 'sell_manager'].includes(role.value));
-  const canViewReports = computed(() => ['super_admin', 'admin', 'manager', 'report_checker', 'inspector'].includes(role.value));
+  const canViewReports = computed(() => ['super_admin', 'admin', 'manager', 'report_checker', 'inspector', 'demo'].includes(role.value));
   const canManageProducts = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager'].includes(role.value));
   const canViewStock = computed(() => !!role.value); // Everyone logged in
-  const canViewActivityLog = computed(() => ['super_admin', 'admin', 'manager', 'inspector'].includes(role.value));
+  const canViewActivityLog = computed(() => ['super_admin', 'admin', 'manager', 'inspector', 'demo'].includes(role.value));
+
+  const isDemo = computed(() => role.value === 'demo');
 
   function setUser(userData) {
     user.value = userData;
@@ -52,6 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
     canManageProducts,
     canViewStock,
     canViewActivityLog,
+    isDemo,
     setUser, 
     logout 
   };

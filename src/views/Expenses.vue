@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { logActivity } from '../utils/activityLogger';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 const expenses = ref([]);
 const loading = ref(false);
@@ -81,6 +84,11 @@ function setDatePreset(preset) {
 }
 
 async function saveExpense() {
+    if (auth.isDemo) {
+        alert("View-only account: Cannot save expenses.");
+        return;
+    }
+
     if (form.value.amount <= 0) {
         alert("Amount must be greater than 0");
         return;
@@ -119,6 +127,11 @@ function editExpense(expense) {
 }
 
 async function deleteExpense(id) {
+    if (auth.isDemo) {
+        alert("View-only account: Cannot delete expenses.");
+        return;
+    }
+
     const isConfirmed = await confirm("Are you sure you want to delete this expense record?", { kind: 'warning' });
     if (!isConfirmed) return;
 
@@ -160,7 +173,7 @@ onMounted(() => {
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <button v-if="viewMode === 'history'" @click="resetForm(); viewMode = 'new'"
+                <button v-if="viewMode === 'history' && !auth.isDemo" @click="resetForm(); viewMode = 'new'"
                     class="w-full sm:w-auto justify-center bg-rose-600 hover:bg-rose-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl shadow-lg shadow-rose-600/20 font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center gap-2">
                     <span>+</span> Add Expense
                 </button>
@@ -261,9 +274,9 @@ onMounted(() => {
                             <td class="px-5 py-3 text-right font-black text-rose-600 text-lg">৳{{
                                 expense.amount.toFixed(2) }}</td>
                             <td class="px-5 py-3 text-right space-x-2">
-                                <button @click="editExpense(expense)"
+                                <button v-if="!auth.isDemo" @click="editExpense(expense)"
                                     class="text-xs font-black text-blue-500 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">EDIT</button>
-                                <button @click="deleteExpense(expense.id)"
+                                <button v-if="!auth.isDemo" @click="deleteExpense(expense.id)"
                                     class="text-xs font-black text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">DEL</button>
                             </td>
                         </tr>

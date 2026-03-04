@@ -75,10 +75,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="h-full flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Available Stock</h1>
-            <button @click="loadStock" class="text-blue-600 hover:text-blue-800 text-sm font-medium w-full sm:w-auto text-left sm:text-right">Refresh Data</button>
+            <button @click="loadStock"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium w-full sm:w-auto text-left sm:text-right">Refresh
+                Data</button>
         </div>
 
         <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 mb-2 sm:mb-4">
@@ -88,69 +90,90 @@ onMounted(() => {
 
         <!-- Card Grid View -->
         <div class="flex-1 overflow-y-auto pr-2 pb-4">
-            <div v-if="loading" class="bg-white rounded-xl shadow-sm p-10 text-center text-blue-500 flex flex-col items-center justify-center">
-                <svg class="animate-spin h-8 w-8 mb-4 border-2 border-t-blue-500 border-r-blue-500 border-b-transparent border-l-transparent rounded-full" viewBox="0 0 24 24"></svg>
+            <div v-if="loading"
+                class="bg-white rounded-xl shadow-sm p-10 text-center text-blue-500 flex flex-col items-center justify-center">
+                <svg class="animate-spin h-8 w-8 mb-4 border-2 border-t-blue-500 border-r-blue-500 border-b-transparent border-l-transparent rounded-full"
+                    viewBox="0 0 24 24"></svg>
                 Loading stock data...
             </div>
-            <div v-else-if="filteredProducts.length === 0" class="bg-white rounded-xl shadow-sm p-10 text-center text-gray-400 italic">
+            <div v-else-if="filteredProducts.length === 0"
+                class="bg-white rounded-xl shadow-sm p-10 text-center text-gray-400 italic">
                 No products found.
             </div>
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <div v-for="product in filteredProducts" :key="product.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow hover:border-blue-100 flex flex-col relative group">
-                    
+                <div v-for="product in filteredProducts" :key="product.id"
+                    class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow hover:border-blue-100 flex flex-col relative group">
+
                     <!-- Top section with image and key info -->
                     <div class="p-4 flex gap-4 items-start border-b border-gray-50 bg-gray-50/50">
                         <!-- Tiny image box -->
-                        <div class="w-16 h-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 font-bold overflow-hidden flex-shrink-0 shadow-sm relative">
+                        <div
+                            class="w-16 h-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 font-bold overflow-hidden flex-shrink-0 shadow-sm relative">
                             <img v-if="product._thumb" :src="product._thumb" class="w-full h-full object-cover">
                             <span v-else class="text-xl opacity-50">{{ product.product_name.charAt(0) }}</span>
                         </div>
-                        
+
                         <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-gray-800 text-base leading-tight truncate" :title="product.product_name">{{ product.product_name }}</h3>
+                            <h3 class="font-bold text-gray-800 text-base leading-tight truncate"
+                                :title="product.product_name">{{ product.product_name }}</h3>
                             <div class="flex flex-wrap items-center gap-2 mt-1 -ml-0.5">
-                                <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono tracking-wider truncate">{{ product.product_code || 'NO-SKU' }}</span>
+                                <span
+                                    class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono tracking-wider truncate">{{
+                                    product.product_code || 'NO-SKU' }}</span>
                                 <span class="text-xs text-gray-400 truncate">{{ product.category || 'General' }}</span>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Main Body: Stock Info -->
                     <div class="p-4 flex-1 flex flex-col relative overflow-hidden">
-                        
+
                         <!-- Decorative background for low stock -->
-                        <div v-if="product.stock_quantity <= 5" class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-red-50 blur-xl z-0 pointer-events-none opacity-50"></div>
-                        
+                        <div v-if="product.stock_quantity <= 5"
+                            class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-red-50 blur-xl z-0 pointer-events-none opacity-50">
+                        </div>
+
                         <div class="relative z-10 flex items-center justify-between">
                             <div>
-                                <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Current Stock</div>
+                                <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Current
+                                    Stock</div>
                                 <div class="flex items-baseline gap-1.5 focus:outline-none">
-                                    <span class="text-3xl font-black tracking-tighter" :class="[product.stock_quantity <= 0 ? 'text-red-600' : product.stock_quantity <= 5 ? 'text-amber-500' : 'text-blue-600']">
+                                    <span class="text-3xl font-black tracking-tighter"
+                                        :class="[product.stock_quantity <= 0 ? 'text-red-600' : product.stock_quantity <= 5 ? 'text-amber-500' : 'text-blue-600']">
                                         {{ product.stock_quantity }}
                                     </span>
                                     <span class="text-xs font-semibold text-gray-500">{{ product.unit || 'pcs' }}</span>
                                 </div>
                             </div>
-                            
+
                             <!-- Badges -->
                             <div class="flex flex-col items-end gap-1 shrink-0">
-                                <span v-if="product.stock_quantity <= 0" class="bg-red-50 text-red-600 border border-red-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm">Out of Stock</span>
-                                <span v-else-if="product.stock_quantity <= 5" class="bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm">Low Stock</span>
-                                <span v-else class="bg-green-50 text-green-600 border border-green-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Available</span>
+                                <span v-if="product.stock_quantity <= 0"
+                                    class="bg-red-50 text-red-600 border border-red-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm">Out
+                                    of Stock</span>
+                                <span v-else-if="product.stock_quantity <= 5"
+                                    class="bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm">Low
+                                    Stock</span>
+                                <span v-else
+                                    class="bg-green-50 text-green-600 border border-green-100 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Available</span>
                             </div>
                         </div>
-                        
+
                         <!-- Action Footer -->
                         <div class="mt-auto pt-4 relative z-10">
-                            <button @click="viewHistory(product)" class="w-full flex justify-center items-center gap-2 py-2.5 px-3 bg-white hover:bg-blue-50 text-blue-600 rounded-lg text-sm font-bold transition-all border border-gray-200 hover:border-blue-200 group-hover:shadow-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <button @click="viewHistory(product)"
+                                class="w-full flex justify-center items-center gap-2 py-2.5 px-3 bg-white hover:bg-blue-50 text-blue-600 rounded-lg text-sm font-bold transition-all border border-gray-200 hover:border-blue-200 group-hover:shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4 opacity-70 group-hover:opacity-100" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 Stock History & Details
                             </button>
                         </div>
                     </div>
-                    
+
                 </div>
             </div>
         </div>

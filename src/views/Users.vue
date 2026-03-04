@@ -185,7 +185,7 @@ onMounted(loadUsers);
 </script>
 
 <template>
-    <div class="h-full flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6">
         <div class="flex flex-col sm:flex-row flex-wrap sm:justify-between items-start sm:items-center gap-3 sm:gap-4">
             <div>
                 <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">User Management</h1>

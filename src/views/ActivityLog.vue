@@ -84,7 +84,7 @@ onMounted(() => loadLogs(true));
 </script>
 
 <template>
-    <div class="h-full flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
@@ -142,7 +142,7 @@ onMounted(() => loadLogs(true));
                                 <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest">{{
                                     log.entity_type }}</span>
                                 <span v-if="log.entity_id" class="text-[10px] font-mono text-gray-300">#{{ log.entity_id
-                                    }}</span>
+                                }}</span>
                             </div>
                             <p class="text-sm text-gray-700 font-medium mt-1 leading-relaxed">{{ log.description }}</p>
                         </div>

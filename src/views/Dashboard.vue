@@ -125,7 +125,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-8 animate-in fade-in duration-500">
+  <div class="flex flex-col space-y-8 animate-in fade-in duration-500">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
       <div>
@@ -169,7 +169,7 @@ onMounted(() => {
         class="bg-gradient-to-br from-emerald-600 to-teal-700 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xl shadow-teal-100 text-white transform transition hover:scale-[1.02]">
         <div class="text-teal-100 text-[9px] sm:text-xs font-black uppercase tracking-widest opacity-80 truncate">{{
           i18n.t('lifetime_profit')
-          }}</div>
+        }}</div>
         <div class="text-2xl sm:text-3xl font-black mt-2 truncate">{{ currencySymbol }}{{
           stats.total_profit.toLocaleString(undefined,
             { minimumFractionDigits: 2 }) }}</div>

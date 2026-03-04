@@ -291,7 +291,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col font-sans">
+  <div class="flex flex-col font-sans">
     <!-- Header Toggle -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 px-1">
       <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -329,7 +329,7 @@ onMounted(() => {
     </div>
 
     <!-- NEW BUYING VIEW -->
-    <div v-if="viewMode === 'new'" class="flex flex-col xl:flex-row flex-1 gap-6 overflow-hidden">
+    <div v-if="viewMode === 'new'" class="flex flex-col xl:flex-row flex-1 gap-6 min-h-0">
 
       <!-- Left: Products Catalog -->
       <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-0">

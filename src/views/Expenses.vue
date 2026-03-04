@@ -164,7 +164,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="h-full flex flex-col space-y-6 animate-in fade-in duration-300">
+    <div class="flex flex-col space-y-6 animate-in fade-in duration-300">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
@@ -222,19 +222,24 @@ onMounted(() => {
 
             <!-- KPI Summary -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div class="bg-rose-50 border border-rose-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between">
+                <div
+                    class="bg-rose-50 border border-rose-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between">
                     <div>
-                        <div class="text-[9px] sm:text-[10px] font-black text-rose-500 uppercase tracking-widest">Total Expenses</div>
-                        <div class="text-xl sm:text-2xl font-black text-rose-800 mt-1">৳{{ totalExpenses.toLocaleString(undefined,
-                            { minimumFractionDigits: 2}) }}</div>
+                        <div class="text-[9px] sm:text-[10px] font-black text-rose-500 uppercase tracking-widest">Total
+                            Expenses</div>
+                        <div class="text-xl sm:text-2xl font-black text-rose-800 mt-1">৳{{
+                            totalExpenses.toLocaleString(undefined,
+                                { minimumFractionDigits: 2}) }}</div>
                     </div>
                     <div class="text-2xl sm:text-3xl opacity-50">💸</div>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between">
+                <div
+                    class="bg-gray-50 border border-gray-200 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between">
                     <div>
-                        <div class="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Expense Count</div>
-                        <div class="text-lg sm:text-xl font-black text-gray-800 mt-1">{{ filteredExpenses.length }} <span
-                                class="text-xs sm:text-sm font-medium text-gray-500">records</span></div>
+                        <div class="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                            Expense Count</div>
+                        <div class="text-lg sm:text-xl font-black text-gray-800 mt-1">{{ filteredExpenses.length }}
+                            <span class="text-xs sm:text-sm font-medium text-gray-500">records</span></div>
                     </div>
                     <div class="text-2xl sm:text-3xl opacity-50">🧾</div>
                 </div>
@@ -268,7 +273,7 @@ onMounted(() => {
                         <tr v-for="expense in filteredExpenses" :key="expense.id"
                             class="border-b border-gray-50 last:border-b-0 hover:bg-rose-50/30 transition-colors">
                             <td class="px-5 py-3 text-gray-500 text-xs font-mono">{{ expense.expense_date?.split('T')[0]
-                                }}</td>
+                            }}</td>
                             <td class="px-5 py-3 font-bold text-gray-800">{{ expense.category }}</td>
                             <td class="px-5 py-3 text-gray-600 text-xs">{{ expense.notes || '—' }}</td>
                             <td class="px-5 py-3 text-right font-black text-rose-600 text-lg">৳{{

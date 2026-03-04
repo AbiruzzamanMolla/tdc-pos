@@ -166,7 +166,7 @@ async function saveProduct() {
     alert("View-only account: Cannot save products.");
     return;
   }
-  
+
   try {
     const productData = {
       id: form.value.id,
@@ -257,7 +257,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-4">
+  <div class="flex flex-col space-y-4">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Products</h1>
       <button v-if="!auth.isDemo" @click="openModal()"

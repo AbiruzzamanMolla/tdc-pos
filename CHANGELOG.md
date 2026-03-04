@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.3] - 2026-03-04
+
+### Fixed
+
+- **Mobile & Tablet Responsiveness**: Comprehensive fix for all pages — removed `h-full` constraints from view containers so content flows naturally and scrolling works properly on all screen sizes.
+- **Removed Mobile Bottom Nav**: Reverted the bottom navigation bar added in v0.20.2 as it was unnecessary and caused overlap issues.
+- **Safe Area Support**: Added `env(safe-area-inset-bottom)` padding to the main content area for proper spacing on devices with system navigation bars.
+- **Calculator Position**: Reverted calculator button to original `bottom-6` position.
+
 ## [0.20.2] - 2026-03-04
 
 ### Added

@@ -332,7 +332,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="flex flex-col">
     <!-- Header Toggle -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-1">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
@@ -370,7 +370,7 @@ onMounted(() => {
     </div>
 
     <!-- POS VIEW -->
-    <div v-if="viewMode === 'pos'" class="flex flex-col xl:flex-row flex-1 gap-4 overflow-hidden">
+    <div v-if="viewMode === 'pos'" class="flex flex-col xl:flex-row flex-1 gap-4 min-h-0">
 
       <!-- Left: Products -->
       <div class="flex-1 flex flex-col bg-white rounded-lg shadow overflow-hidden min-h-0">
@@ -424,8 +424,8 @@ onMounted(() => {
       <div
         class="w-full xl:w-96 flex flex-col bg-white rounded-lg shadow overflow-hidden flex-shrink-0 max-h-[50vh] xl:max-h-full">
         <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 text-sm flex justify-between items-center">
-            <span>Cart</span>
-            <span class="bg-gray-200 px-2 py-0.5 rounded text-xs">{{ cart.length }} items</span>
+          <span>Cart</span>
+          <span class="bg-gray-200 px-2 py-0.5 rounded text-xs">{{ cart.length }} items</span>
         </div>
 
         <div class="flex-1 overflow-y-auto p-3 space-y-3">

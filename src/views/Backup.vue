@@ -271,7 +271,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-6">
+  <div class="flex flex-col space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
       <div>

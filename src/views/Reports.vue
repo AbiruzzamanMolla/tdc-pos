@@ -145,7 +145,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-6">
+  <div class="flex flex-col space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
       <div>
@@ -186,7 +186,8 @@ onMounted(() => {
         </div>
 
         <!-- Date Range (Sales only) -->
-        <div v-if="currentTab === 'sales'" class="flex flex-col sm:flex-row flex-wrap gap-2 items-start sm:items-center w-full sm:w-auto">
+        <div v-if="currentTab === 'sales'"
+          class="flex flex-col sm:flex-row flex-wrap gap-2 items-start sm:items-center w-full sm:w-auto">
           <div class="flex bg-gray-50 border border-gray-200 rounded-xl overflow-x-auto w-full sm:w-auto">
             <button
               v-for="p in [{ label: 'Today', key: 'today' }, { label: 'Week', key: 'week' }, { label: 'Month', key: 'month' }, { label: 'Year', key: 'year' }, { label: 'All', key: 'all' }]"
@@ -196,9 +197,11 @@ onMounted(() => {
             </button>
           </div>
           <div class="flex items-center gap-2 w-full sm:w-auto">
-            <input v-model="startDate" type="date" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-gray-50 flex-1 sm:flex-none">
+            <input v-model="startDate" type="date"
+              class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-gray-50 flex-1 sm:flex-none">
             <span class="text-gray-300 text-xs font-bold">→</span>
-            <input v-model="endDate" type="date" class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-gray-50 flex-1 sm:flex-none">
+            <input v-model="endDate" type="date"
+              class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-gray-50 flex-1 sm:flex-none">
             <button @click="loadReport"
               class="bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 text-xs font-bold transition-colors active:scale-95">Go</button>
           </div>
@@ -245,26 +248,32 @@ onMounted(() => {
 
     <div v-if="currentTab === 'inventory'" class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
       <div class="bg-purple-50 border border-purple-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
-        <div class="text-[9px] sm:text-[10px] font-black text-purple-500 uppercase tracking-widest truncate">Cost Value</div>
+        <div class="text-[9px] sm:text-[10px] font-black text-purple-500 uppercase tracking-widest truncate">Cost Value
+        </div>
         <div class="text-lg sm:text-xl font-black text-purple-800 mt-1 truncate">{{ currencySymbol }}{{
           totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-blue-50 border border-blue-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
-        <div class="text-[9px] sm:text-[10px] font-black text-blue-500 uppercase tracking-widest truncate">Retail Value</div>
+        <div class="text-[9px] sm:text-[10px] font-black text-blue-500 uppercase tracking-widest truncate">Retail Value
+        </div>
         <div class="text-lg sm:text-xl font-black text-blue-800 mt-1 truncate">{{ currencySymbol }}{{
           totalRetailValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
-      <div class="col-span-2 sm:col-span-1 bg-green-50 border border-green-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
-        <div class="text-[9px] sm:text-[10px] font-black text-green-500 uppercase tracking-widest truncate">Potential Profit</div>
+      <div
+        class="col-span-2 sm:col-span-1 bg-green-50 border border-green-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
+        <div class="text-[9px] sm:text-[10px] font-black text-green-500 uppercase tracking-widest truncate">Potential
+          Profit</div>
         <div class="text-lg sm:text-xl font-black text-green-800 mt-1 truncate">{{ currencySymbol }}{{
           totalPotentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</div>
       </div>
       <div class="bg-red-50 border border-red-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
-        <div class="text-[9px] sm:text-[10px] font-black text-red-500 uppercase tracking-widest truncate">Out of Stock</div>
+        <div class="text-[9px] sm:text-[10px] font-black text-red-500 uppercase tracking-widest truncate">Out of Stock
+        </div>
         <div class="text-lg sm:text-xl font-black text-red-800 mt-1 truncate">{{ outOfStockCount }}</div>
       </div>
       <div class="bg-amber-50 border border-amber-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-left">
-        <div class="text-[9px] sm:text-[10px] font-black text-amber-500 uppercase tracking-widest truncate">Low Stock</div>
+        <div class="text-[9px] sm:text-[10px] font-black text-amber-500 uppercase tracking-widest truncate">Low Stock
+        </div>
         <div class="text-lg sm:text-xl font-black text-amber-800 mt-1 truncate">{{ lowStockCount }}</div>
       </div>
     </div>

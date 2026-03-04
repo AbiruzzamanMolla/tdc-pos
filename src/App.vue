@@ -128,7 +128,7 @@ function logout() {
       - Mobile: Fixed position, slide-in transformation.
       - Desktop: Relative position to push content, v-show/hidden toggling.
     -->
-    <aside v-if="route.name !== 'Login'" :class="[
+    <aside v-if="route.name !== 'Login' && route.name !== 'License'" :class="[
       'flex flex-col shadow-xl z-50 sidebar-shell transition-all duration-300 ease-in-out',
       isMobile ? 'fixed inset-y-0 left-0 w-64' : 'relative',
       isMobile && !isSidebarOpen ? '-translate-x-full' : 'translate-x-0',
@@ -270,7 +270,8 @@ function logout() {
     <main class="flex-1 overflow-auto relative w-full h-full flex flex-col" style="background: var(--t-main-bg);">
 
       <!-- Top Toggle Button (Visible on Mobile AND Desktop when closed) -->
-      <div v-if="route.name !== 'Login'" class="sticky top-0 z-30 w-full flex items-center p-3 md:p-4 bg-transparent"
+      <div v-if="route.name !== 'Login' && route.name !== 'License'"
+        class="sticky top-0 z-30 w-full flex items-center p-3 md:p-4 bg-transparent"
         style="padding-top: max(env(safe-area-inset-top, 1rem), 1rem);">
         <button @click="isSidebarOpen = !isSidebarOpen"
           class="p-2 rounded-xl shadow-sm border border-gray-200 bg-white/80 backdrop-blur-md hover:bg-white hover:shadow-md transition-all active:scale-95 flex-shrink-0"

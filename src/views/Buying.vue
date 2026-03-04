@@ -21,6 +21,9 @@ const showProductDetails = ref(false);
 const selectedProductDetails = ref(null);
 const editingPurchaseId = ref(null);
 
+const historyPage = ref(1);
+const historyPerPage = 15;
+
 const form = reactive({
   supplier_name: "",
   supplier_phone: "",
@@ -41,6 +44,16 @@ const filteredProducts = computed(() => {
 const totalAmount = computed(() => {
   return cart.value.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 });
+
+const historyTotalPages = computed(() => Math.ceil(purchases.value.length / historyPerPage) || 1);
+const paginatedPurchases = computed(() => {
+  const start = (historyPage.value - 1) * historyPerPage;
+  return purchases.value.slice(start, start + historyPerPage);
+});
+
+function goToHistoryPage(p) {
+  if (p >= 1 && p <= historyTotalPages.value) historyPage.value = p;
+}
 
 async function loadPurchases() {
   try {
@@ -550,7 +563,7 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody class="text-gray-700 text-sm font-medium">
-          <tr v-for="purchase in purchases" :key="purchase.purchase_id"
+          <tr v-for="purchase in paginatedPurchases" :key="purchase.purchase_id"
             class="hover:bg-blue-50/30 border-b border-gray-50 transition-colors">
             <td class="p-4 text-xs font-mono text-gray-500">{{ purchase.purchase_date }}</td>
             <td class="p-4 font-extrabold text-gray-900">{{ purchase.supplier_name || 'Walk-in Vendor' }}</td>
@@ -577,6 +590,23 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="historyTotalPages > 1"
+        class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-100">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Showing {{ (historyPage - 1) *
+          historyPerPage + 1 }}–{{ Math.min(historyPage * historyPerPage, purchases.length) }} of {{ purchases.length
+          }}</span>
+        <div class="flex items-center gap-2">
+          <button @click="goToHistoryPage(historyPage - 1)" :disabled="historyPage === 1"
+            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">←
+            Prev</button>
+          <span class="text-xs font-bold text-gray-600 px-3">Page {{ historyPage }} of {{ historyTotalPages }}</span>
+          <button @click="goToHistoryPage(historyPage + 1)" :disabled="historyPage === historyTotalPages"
+            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">Next
+            →</button>
+        </div>
+      </div>
     </div>
 
     <!-- Purchase Details Modal -->

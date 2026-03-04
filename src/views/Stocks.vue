@@ -58,6 +58,9 @@ function formatDate(dateStr) {
 }
 
 
+const currentPage = ref(1);
+const itemsPerPage = 12;
+
 const filteredProducts = computed(() => {
     if (!searchQuery.value) return products.value;
     const query = searchQuery.value.toLowerCase();
@@ -66,6 +69,16 @@ const filteredProducts = computed(() => {
         (p.product_code && p.product_code.toLowerCase().includes(query))
     );
 });
+
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage) || 1);
+const paginatedProducts = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredProducts.value.slice(start, start + itemsPerPage);
+});
+
+function goToPage(p) {
+    if (p >= 1 && p <= totalPages.value) currentPage.value = p;
+}
 
 onMounted(() => {
     loadSettings();
@@ -84,7 +97,8 @@ onMounted(() => {
         </div>
 
         <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 mb-2 sm:mb-4">
-            <input v-model="searchQuery" type="text" placeholder="Search product by name or SKU..."
+            <input v-model="searchQuery" @input="currentPage = 1" type="text"
+                placeholder="Search product by name or SKU..."
                 class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
         </div>
 
@@ -101,7 +115,7 @@ onMounted(() => {
                 No products found.
             </div>
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <div v-for="product in filteredProducts" :key="product.id"
+                <div v-for="product in paginatedProducts" :key="product.id"
                     class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow hover:border-blue-100 flex flex-col relative group">
 
                     <!-- Top section with image and key info -->
@@ -119,7 +133,7 @@ onMounted(() => {
                             <div class="flex flex-wrap items-center gap-2 mt-1 -ml-0.5">
                                 <span
                                     class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono tracking-wider truncate">{{
-                                    product.product_code || 'NO-SKU' }}</span>
+                                        product.product_code || 'NO-SKU' }}</span>
                                 <span class="text-xs text-gray-400 truncate">{{ product.category || 'General' }}</span>
                             </div>
                         </div>
@@ -174,6 +188,23 @@ onMounted(() => {
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="totalPages > 1"
+                class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Showing {{ (currentPage - 1) *
+                    itemsPerPage + 1 }}–{{ Math.min(currentPage * itemsPerPage, filteredProducts.length) }} of {{
+                        filteredProducts.length }}</span>
+                <div class="flex items-center gap-2">
+                    <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+                        class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">←
+                        Prev</button>
+                    <span class="text-xs font-bold text-gray-600 px-3">Page {{ currentPage }} of {{ totalPages }}</span>
+                    <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+                        class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">Next
+                        →</button>
                 </div>
             </div>
         </div>

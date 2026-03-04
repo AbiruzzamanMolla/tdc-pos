@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.21.0] - 2026-03-04
+
+### Added
+
+- **Pagination**: Added client-side pagination to Products (12/page), Stock (12/page), Buying History (15/page), Selling History (15/page), and Activity Log (20/page) with prev/next navigation controls and item count display.
+
+### Fixed
+
+- **License Page**: Hidden sidebar and top navigation bar on the License activation page — previously these were incorrectly visible.
+- **Activity Log**: Converted from "Load More" pattern to proper page-based pagination.
+
 ## [0.20.3] - 2026-03-04
 
 ### Fixed

@@ -4,9 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 
 const logs = ref([]);
 const loading = ref(false);
-const page = ref(0);
-const pageSize = 50;
-const hasMore = ref(true);
+const currentPage = ref(1);
+const itemsPerPage = 20;
 const filterAction = ref('');
 const filterEntity = ref('');
 const searchQuery = ref('');
@@ -40,27 +39,26 @@ const filteredLogs = computed(() => {
     return result;
 });
 
-async function loadLogs(reset = false) {
-    if (reset) { page.value = 0; logs.value = []; hasMore.value = true; }
+const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage) || 1);
+const paginatedLogs = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredLogs.value.slice(start, start + itemsPerPage);
+});
+
+function goToPage(p) {
+    if (p >= 1 && p <= totalPages.value) currentPage.value = p;
+}
+
+async function loadLogs() {
     try {
         loading.value = true;
-        const data = await invoke('get_activity_logs', { limit: pageSize, offset: page.value * pageSize });
-        if (data.length < pageSize) hasMore.value = false;
-        if (reset) {
-            logs.value = data;
-        } else {
-            logs.value.push(...data);
-        }
+        const data = await invoke('get_activity_logs', { limit: 9999, offset: 0 });
+        logs.value = data;
     } catch (err) {
         console.error('Failed to load logs', err);
     } finally {
         loading.value = false;
     }
-}
-
-function loadMore() {
-    page.value++;
-    loadLogs(false);
 }
 
 function getActionStyle(action) {
@@ -80,7 +78,7 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-onMounted(() => loadLogs(true));
+onMounted(() => loadLogs());
 </script>
 
 <template>
@@ -91,7 +89,7 @@ onMounted(() => loadLogs(true));
                 <h1 class="text-3xl font-black text-gray-900 tracking-tight">Activity Log</h1>
                 <p class="text-gray-400 text-sm font-medium">Track all system changes and user actions</p>
             </div>
-            <button @click="loadLogs(true)" :disabled="loading"
+            <button @click="loadLogs" :disabled="loading"
                 class="bg-white border border-gray-200 hover:border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
                 🔄 Refresh
             </button>
@@ -99,7 +97,8 @@ onMounted(() => loadLogs(true));
 
         <!-- Filters -->
         <div class="flex flex-wrap gap-3">
-            <input v-model="searchQuery" type="text" placeholder="Search by description or user..."
+            <input v-model="searchQuery" @input="currentPage = 1" type="text"
+                placeholder="Search by description or user..."
                 class="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             <select v-model="filterAction"
                 class="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold">
@@ -125,7 +124,7 @@ onMounted(() => loadLogs(true));
                 </div>
 
                 <div v-else class="divide-y divide-gray-50">
-                    <div v-for="log in filteredLogs" :key="log.id"
+                    <div v-for="log in paginatedLogs" :key="log.id"
                         class="flex items-start gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors group">
                         <!-- Action Icon -->
                         <div class="flex-shrink-0 mt-0.5 text-lg">
@@ -156,20 +155,23 @@ onMounted(() => loadLogs(true));
                     </div>
                 </div>
 
-                <!-- Load More -->
-                <div v-if="hasMore && filteredLogs.length > 0" class="p-4 text-center">
-                    <button @click="loadMore" :disabled="loading"
-                        class="text-xs font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest disabled:opacity-50">
-                        {{ loading ? 'Loading...' : 'Load More' }}
-                    </button>
+                <!-- Pagination -->
+                <div v-if="totalPages > 1"
+                    class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-50">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Showing {{ (currentPage - 1)
+                        * itemsPerPage + 1 }}–{{ Math.min(currentPage * itemsPerPage, filteredLogs.length) }} of {{
+                            filteredLogs.length }}</span>
+                    <div class="flex items-center gap-2">
+                        <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+                            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">←
+                            Prev</button>
+                        <span class="text-xs font-bold text-gray-600 px-3">Page {{ currentPage }} of {{ totalPages
+                        }}</span>
+                        <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+                            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 active:scale-95">Next
+                            →</button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Footer Stats -->
-            <div
-                class="border-t border-gray-50 px-6 py-3 bg-gray-50/50 flex items-center justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                <span>Showing {{ filteredLogs.length }} of {{ logs.length }} loaded</span>
-                <span>Page {{ page + 1 }}</span>
             </div>
         </div>
     </div>

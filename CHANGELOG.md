@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.20.2] - 2026-03-04
+
+### Added
+
+- **Mobile Bottom Navigation**: Introduced a sticky bottom navigation bar for mobile devices to provide quick access to Dashboard, Buying, Selling, and Stock List.
+
+### Fixed
+
+- **Mobile Visibility**: Increased bottom padding across all pages to prevent content and footer items from being obscured by system navigation bars or the new bottom nav.
+
 ## [0.20.1] - 2026-03-04
 
 ### Fixed

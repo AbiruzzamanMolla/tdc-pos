@@ -288,9 +288,37 @@ function logout() {
         </div>
       </div>
 
-      <div class="flex-1 px-3 pb-20 md:px-8 md:pb-8 w-full max-w-[1920px] mx-auto overflow-y-auto">
+      <div class="flex-1 px-3 pb-32 md:px-8 md:pb-8 w-full max-w-[1920px] mx-auto overflow-y-auto">
         <RouterView />
       </div>
+
+      <!-- Mobile Bottom Navigation -->
+      <nav v-if="isMobile" class="fixed bottom-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-40" style="background: var(--t-main-card-bg); border-color: var(--t-main-card-border); padding-bottom: env(safe-area-inset-bottom);">
+        <RouterLink to="/" class="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all active:scale-90" active-class="text-blue-600">
+          <span class="text-xl" :class="route.path === '/' ? 'opacity-100' : 'opacity-50'">🏠</span>
+          <span class="text-[10px] font-black uppercase tracking-tighter" :style="route.path === '/' ? 'color: var(--t-accent)' : 'color: var(--t-main-muted)'">Home</span>
+        </RouterLink>
+
+        <RouterLink v-if="auth.canBuy" to="/buying" class="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all active:scale-90" active-class="text-blue-600">
+          <span class="text-xl" :class="route.path === '/buying' ? 'opacity-100' : 'opacity-50'">🚛</span>
+          <span class="text-[10px] font-black uppercase tracking-tighter" :style="route.path === '/buying' ? 'color: var(--t-accent)' : 'color: var(--t-main-muted)'">Buy</span>
+        </RouterLink>
+
+        <RouterLink v-if="auth.canSell" to="/selling" class="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all active:scale-90" active-class="text-blue-600">
+          <span class="text-xl" :class="route.path === '/selling' ? 'opacity-100' : 'opacity-50'">🛒</span>
+          <span class="text-[10px] font-black uppercase tracking-tighter" :style="route.path === '/selling' ? 'color: var(--t-accent)' : 'color: var(--t-main-muted)'">Sell</span>
+        </RouterLink>
+
+        <RouterLink v-if="auth.canViewStock" to="/stocks" class="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all active:scale-90" active-class="text-blue-600">
+          <span class="text-xl" :class="route.path === '/stocks' ? 'opacity-100' : 'opacity-50'">📦</span>
+          <span class="text-[10px] font-black uppercase tracking-tighter" :style="route.path === '/stocks' ? 'color: var(--t-accent)' : 'color: var(--t-main-muted)'">Stock</span>
+        </RouterLink>
+
+        <button @click="isSidebarOpen = true" class="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all active:scale-90">
+          <span class="text-xl opacity-50">☰</span>
+          <span class="text-[10px] font-black uppercase tracking-tighter" style="color: var(--t-main-muted)">Menu</span>
+        </button>
+      </nav>
     </main>
     <FloatingCalculator />
   </div>

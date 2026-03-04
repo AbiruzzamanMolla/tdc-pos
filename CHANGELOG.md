@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.20.1] - 2026-03-04
+
+### Fixed
+
+- **Mobile View**: Added bottom margin to every page on mobile devices to prevent the Android navigation bar from covering items.
+
 ## [0.20.0] - 2026-03-04
 
 ### Added

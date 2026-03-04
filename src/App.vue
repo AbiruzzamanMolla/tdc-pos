@@ -288,7 +288,7 @@ function logout() {
         </div>
       </div>
 
-      <div class="flex-1 px-3 pb-3 md:px-8 md:pb-8 w-full max-w-[1920px] mx-auto overflow-y-auto">
+      <div class="flex-1 px-3 pb-20 md:px-8 md:pb-8 w-full max-w-[1920px] mx-auto overflow-y-auto">
         <RouterView />
       </div>
     </main>

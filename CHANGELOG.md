@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.20.0] - 2026-03-04
+
+### Added
+
+- **Fraud Checker Redesign**: Completely redesigned the Fraud Checker tool with a premium, responsive UI and new backend integration.
+- **Enhanced Metrics**: Added detailed courier breakdown (Steadfast, Pathao, Redx) with individual success ratios and progress bars.
+- **Aggregate Analytics**: Implemented aggregate statistical overview for phone numbers, calculating overall safe/risk probabilities.
+
+### Changed
+
+- **API Integration**: Migrated the Fraud Checker to the latest TDC API endpoint (`/api/tdc/check-fraud`) with secure token-based authentication.
+
+### Fixed
+
+- **Fraud Check Endpoint**: Resolved an issue where the old fraud checker URL was no longer returning valid data.
+
 ## [0.19.1] - 2026-03-04
 
 ### Fixed

@@ -103,3 +103,19 @@ $$Stock\ Value = \sum_{all\ products}(Stock\ Quantity \times Buying\ Price)$$
 | `Snapshot`       | The WAC at the specific second a sale occurred.      | Database        | POS (Orders)    |
 | `Profit %`       | User-defined margin for price suggestions.           | User Input      | Products        |
 | `Tax %`          | Percentage added to subtotal (if applicable).        | User Input      | Products        |
+| `Success Ratio`  | (Successful Deliveries / Total Deliveries) \* 100    | API Response    | Dashboard       |
+
+---
+
+## 6. Fraud Checker Module (`Dashboard.vue`)
+
+### 6.1 Courier Success Ratio
+
+**Formula:**
+$$Success\ Ratio_{Courier} = \frac{Success}{Total} \times 100$$
+
+### 6.2 Aggregate Success/Cancel Ratio
+
+**Formula:**
+$$Aggregate\ Success\ Ratio = \frac{\sum Success_{All}}{\sum Total_{All}} \times 100$$
+$$Aggregate\ Cancel\ Ratio = \frac{\sum Cancel_{All}}{\sum Total_{All}} \times 100$$

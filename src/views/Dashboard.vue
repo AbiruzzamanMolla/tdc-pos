@@ -14,17 +14,33 @@ const isLoadingFraud = ref(false);
 const fraudError = ref(null);
 
 const fraudStats = computed(() => {
-  if (!fraudResult.value || !fraudResult.value.data || !fraudResult.value.data.couriers) return null;
-  const couriers = fraudResult.value.data.couriers;
+  if (!fraudResult.value || !fraudResult.value.data) return null;
+  const data = fraudResult.value.data;
+
+  // Use aggregate stats if available
+  if (data.aggregate) {
+    return {
+      totalSuccess: data.aggregate.total_success || 0,
+      totalCancel: data.aggregate.total_cancel || 0,
+      totalOrders: data.aggregate.total_deliveries || 0,
+      successPercentage: data.aggregate.success_ratio || 0,
+      cancelPercentage: data.aggregate.cancel_ratio || 0,
+      hasData: data.aggregate.total_deliveries > 0
+    };
+  }
+
+  // Fallback to manual calculation if aggregate is missing
   let totalSuccess = 0;
   let totalCancel = 0;
   let totalOrders = 0;
-  
-  for (const [name, data] of Object.entries(couriers)) {
-    if (!data.error) {
-      totalSuccess += data.success || 0;
-      totalCancel += data.cancel || 0;
-      totalOrders += data.total || 0;
+
+  const couriers = ['steadfast', 'pathao', 'redx'];
+  for (const name of couriers) {
+    const courierData = data[name];
+    if (courierData && !courierData.error) {
+      totalSuccess += courierData.success || 0;
+      totalCancel += courierData.cancel || 0;
+      totalOrders += courierData.total || 0;
     }
   }
 
@@ -44,24 +60,30 @@ const fraudStats = computed(() => {
 
 async function checkFraud() {
   if (!fraudPhone.value.trim()) return;
-  
+
   isLoadingFraud.value = true;
   fraudError.value = null;
   fraudResult.value = null;
-  
+
   try {
+    const token = localStorage.getItem('tdc_license_token');
+    if (!token) {
+      throw new Error('Authentication token missing. Please ensure your license is active.');
+    }
+
     const formData = new FormData();
     formData.append('phone', fraudPhone.value.trim());
-    
-    const response = await fetch('https://audiobookbangla.com/api/v2/check-fraud', {
+    formData.append('token', token);
+
+    const response = await fetch('https://audiobookbangla.com/api/tdc/check-fraud', {
       method: 'POST',
       body: formData
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     fraudResult.value = data;
   } catch (error) {
@@ -107,7 +129,8 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight">{{ i18n.t('executive_dashboard') }}</h1>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight">{{
+          i18n.t('executive_dashboard') }}</h1>
         <p class="text-xs sm:text-sm text-gray-500 font-medium">{{ i18n.t('precision_analytics') }}</p>
       </div>
       <div class="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
@@ -144,10 +167,12 @@ onMounted(() => {
 
       <div
         class="bg-gradient-to-br from-emerald-600 to-teal-700 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xl shadow-teal-100 text-white transform transition hover:scale-[1.02]">
-        <div class="text-teal-100 text-[9px] sm:text-xs font-black uppercase tracking-widest opacity-80 truncate">{{ i18n.t('lifetime_profit')
-        }}</div>
-        <div class="text-2xl sm:text-3xl font-black mt-2 truncate">{{ currencySymbol }}{{ stats.total_profit.toLocaleString(undefined,
-          { minimumFractionDigits: 2 }) }}</div>
+        <div class="text-teal-100 text-[9px] sm:text-xs font-black uppercase tracking-widest opacity-80 truncate">{{
+          i18n.t('lifetime_profit')
+          }}</div>
+        <div class="text-2xl sm:text-3xl font-black mt-2 truncate">{{ currencySymbol }}{{
+          stats.total_profit.toLocaleString(undefined,
+            { minimumFractionDigits: 2 }) }}</div>
         <div class="mt-4 flex items-center gap-2">
           <span class="px-2 py-0.5 bg-white/20 rounded-lg text-[10px] font-bold uppercase tracking-tighter">{{
             i18n.t('net_accrued') }}</span>
@@ -157,7 +182,8 @@ onMounted(() => {
       <div
         class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between group cursor-help">
         <div class="overflow-hidden">
-          <div class="text-gray-400 text-[9px] sm:text-xs font-black uppercase tracking-widest truncate">{{ i18n.t('active_orders') }}</div>
+          <div class="text-gray-400 text-[9px] sm:text-xs font-black uppercase tracking-widest truncate">{{
+            i18n.t('active_orders') }}</div>
           <div class="text-2xl sm:text-3xl font-black text-gray-900 mt-1">{{ stats.order_count }}</div>
         </div>
         <div
@@ -169,11 +195,14 @@ onMounted(() => {
       <div
         class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between group relative overflow-hidden">
         <div v-if="stats.low_stock_count > 0"
-          class="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-red-500 rotate-45 translate-x-8 -translate-y-8 sm:translate-x-10 sm:-translate-y-10"></div>
+          class="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-red-500 rotate-45 translate-x-8 -translate-y-8 sm:translate-x-10 sm:-translate-y-10">
+        </div>
         <div class="overflow-hidden">
-          <div class="text-gray-400 text-[9px] sm:text-xs font-black uppercase tracking-widest truncate">{{ i18n.t('low_stock_items') }}</div>
-          <div class="text-2xl sm:text-3xl font-black text-gray-900 mt-1" :class="{ 'text-red-500': stats.low_stock_count > 0 }">{{
-            stats.low_stock_count }}</div>
+          <div class="text-gray-400 text-[9px] sm:text-xs font-black uppercase tracking-widest truncate">{{
+            i18n.t('low_stock_items') }}</div>
+          <div class="text-2xl sm:text-3xl font-black text-gray-900 mt-1"
+            :class="{ 'text-red-500': stats.low_stock_count > 0 }">{{
+              stats.low_stock_count }}</div>
         </div>
         <div
           class="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gray-50 flex items-center justify-center transition-colors group-hover:bg-red-50 flex-shrink-0 ml-2">
@@ -183,7 +212,8 @@ onMounted(() => {
     </div>
 
     <!-- Temporal Insights Tabs -->
-    <div v-if="auth.canViewReports" class="bg-white rounded-2xl sm:rounded-[2rem] shadow-sm border border-gray-100 p-4 sm:p-8">
+    <div v-if="auth.canViewReports"
+      class="bg-white rounded-2xl sm:rounded-[2rem] shadow-sm border border-gray-100 p-4 sm:p-8">
       <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-10">
         <div class="w-full xl:w-auto overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <div class="flex bg-gray-100 p-1.5 rounded-2xl w-max">
@@ -204,7 +234,8 @@ onMounted(() => {
       <!-- Sales Context -->
       <div v-if="activeTab === 'sales'"
         class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 animate-in slide-in-from-bottom-4 duration-500">
-        <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-blue-50/50 border border-blue-100 relative overflow-hidden group text-left">
+        <div
+          class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-blue-50/50 border border-blue-100 relative overflow-hidden group text-left">
           <div
             class="absolute -right-4 -bottom-4 text-6xl sm:text-8xl opacity-[0.03] font-black group-hover:scale-110 transition-transform select-none">
             D</div>
@@ -214,7 +245,8 @@ onMounted(() => {
           <progress class="w-full h-1.5 mt-6 accent-blue-600 opacity-20" :value="stats.sales_today"
             :max="stats.sales_month / 10"></progress>
         </div>
-        <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-indigo-50/50 border border-indigo-100 relative overflow-hidden group text-left">
+        <div
+          class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-indigo-50/50 border border-indigo-100 relative overflow-hidden group text-left">
           <div
             class="absolute -right-4 -bottom-4 text-6xl sm:text-8xl opacity-[0.03] font-black group-hover:scale-110 transition-transform select-none">
             M</div>
@@ -224,7 +256,8 @@ onMounted(() => {
           <progress class="w-full h-1.5 mt-6 accent-indigo-600 opacity-20" :value="stats.sales_month"
             :max="stats.sales_year / 12"></progress>
         </div>
-        <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-violet-50/50 border border-violet-100 relative overflow-hidden group text-left">
+        <div
+          class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-violet-50/50 border border-violet-100 relative overflow-hidden group text-left">
           <div
             class="absolute -right-4 -bottom-4 text-6xl sm:text-8xl opacity-[0.03] font-black group-hover:scale-110 transition-transform select-none">
             Y</div>
@@ -239,8 +272,10 @@ onMounted(() => {
       <!-- Purchases Context -->
       <div v-if="activeTab === 'purchases'"
         class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
-        <div class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-amber-50/50 border border-amber-100 relative overflow-hidden group">
-          <div class="absolute -right-4 -bottom-4 text-5xl sm:text-6xl opacity-[0.03] font-black select-none">STOCK</div>
+        <div
+          class="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-amber-50/50 border border-amber-100 relative overflow-hidden group">
+          <div class="absolute -right-4 -bottom-4 text-5xl sm:text-6xl opacity-[0.03] font-black select-none">STOCK
+          </div>
           <h4 class="text-amber-600 text-xs font-black uppercase tracking-widest mb-2">{{ i18n.t('procurement_today') }}
           </h4>
           <div class="text-4xl font-black text-amber-900">{{ currencySymbol }}{{ stats.purchases_today.toLocaleString()
@@ -295,9 +330,12 @@ onMounted(() => {
 
     <!-- System Actions & Stats -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
-      <div class="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-8 shadow-sm text-left">
-        <h3 class="text-sm sm:text-lg font-black text-gray-900 uppercase tracking-widest mb-4 sm:mb-6 border-b border-gray-50 pb-4">{{
-          i18n.t('operational_shortcuts') }}</h3>
+      <div
+        class="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-8 shadow-sm text-left">
+        <h3
+          class="text-sm sm:text-lg font-black text-gray-900 uppercase tracking-widest mb-4 sm:mb-6 border-b border-gray-50 pb-4">
+          {{
+            i18n.t('operational_shortcuts') }}</h3>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <router-link v-if="auth.canSell" to="/selling"
             class="flex flex-col items-center p-6 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors group">
@@ -323,7 +361,8 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="bg-gray-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col justify-between text-white shadow-xl text-left">
+      <div
+        class="bg-gray-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col justify-between text-white shadow-xl text-left">
         <div>
           <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-8">{{ i18n.t('system_integrity') }}
           </h3>
@@ -348,33 +387,29 @@ onMounted(() => {
     </div>
 
     <!-- Fraud Checker Modal -->
-    <div v-if="showFraudChecker" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div v-if="showFraudChecker"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         <!-- Header -->
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 class="text-xl font-black text-gray-900 flex items-center gap-2">
             <span>🛡️</span> {{ i18n.t('fraud_checker') || 'Fraud Check / ফ্রড চেক' }}
           </h2>
-          <button @click="showFraudChecker = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <button @click="showFraudChecker = false"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
           </button>
         </div>
-        
+
         <!-- Content -->
         <div class="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-4 sm:gap-6">
           <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <input 
-              v-model="fraudPhone" 
-              @keyup.enter="checkFraud"
-              type="text" 
-              placeholder="Enter Phone Number..." 
-              class="flex-1 bg-white border-2 border-gray-200 text-gray-900 text-base rounded-xl sm:rounded-2xl focus:ring-0 focus:border-blue-500 block w-full p-3 sm:p-4 font-bold transition-all shadow-sm"
-            >
-            <button 
-              @click="checkFraud" 
-              :disabled="isLoadingFraud || !fraudPhone.trim()"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-blue-500 w-full sm:w-auto"
-            >
+            <input v-model="fraudPhone" @keyup.enter="checkFraud" type="text" placeholder="Enter Phone Number..."
+              class="flex-1 bg-white border-2 border-gray-200 text-gray-900 text-base rounded-xl sm:rounded-2xl focus:ring-0 focus:border-blue-500 block w-full p-3 sm:p-4 font-bold transition-all shadow-sm">
+            <button @click="checkFraud" :disabled="isLoadingFraud || !fraudPhone.trim()"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-blue-500 w-full sm:w-auto">
               <span v-if="isLoadingFraud" class="animate-spin text-base">⏳</span>
               <span v-else class="text-base">🔍</span>
               Check
@@ -385,66 +420,100 @@ onMounted(() => {
             {{ fraudError }}
           </div>
 
-          <div v-if="fraudResult && !fraudResult.success" class="p-4 bg-red-50 text-red-600 rounded-2xl font-medium border border-red-100">
+          <div v-if="fraudResult && !fraudResult.success"
+            class="p-4 bg-red-50 text-red-600 rounded-2xl font-medium border border-red-100">
             {{ fraudResult.message || 'Unknown error occurred' }}
           </div>
 
-          <div v-else-if="fraudResult && fraudResult.success" class="flex flex-col gap-6 w-full animate-in fade-in duration-300">
+          <div v-if="fraudResult && fraudResult.status === 'success'"
+            class="flex flex-col gap-6 w-full animate-in fade-in duration-300">
             <!-- Overall Probability -->
             <div v-if="fraudStats && fraudStats.hasData" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl shadow-sm text-left">
-                  <h4 class="text-emerald-700 text-xs font-black uppercase tracking-widest mb-2">Genuine Customer Probability</h4>
-                  <div class="text-5xl font-black text-emerald-600 mb-2">{{ fraudStats.successPercentage }}%</div>
-                  <div class="text-sm font-bold text-emerald-800 mt-2">Successful Deliveries: {{ fraudStats.totalSuccess }} / {{ fraudStats.totalOrders }}</div>
-                  
-                  <!-- progress bar equivalent -->
-                  <div class="w-full bg-white rounded-full h-2 mt-4 overflow-hidden border border-emerald-100">
-                    <div class="bg-emerald-500 h-2 rounded-full transition-all duration-1000" :style="`width: ${fraudStats.successPercentage}%`"></div>
-                  </div>
+              <div
+                class="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 p-6 rounded-3xl shadow-sm text-left relative overflow-hidden group">
+                <div
+                  class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] font-black group-hover:scale-110 transition-transform select-none">
+                  SAFE</div>
+                <h4
+                  class="text-emerald-700 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Genuine Probability
+                </h4>
+                <div class="text-5xl font-black text-emerald-600 mb-2">{{ fraudStats.successPercentage }}%</div>
+                <div class="text-[11px] font-bold text-emerald-800/60 mt-2 uppercase tracking-tight">Successful
+                  Deliveries: {{ fraudStats.totalSuccess }} / {{ fraudStats.totalOrders }}</div>
+
+                <div
+                  class="w-full bg-emerald-100/50 rounded-full h-1.5 mt-4 overflow-hidden border border-emerald-100/50">
+                  <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000 ease-out"
+                    :style="`width: ${fraudStats.successPercentage}%`"></div>
+                </div>
               </div>
-              <div class="bg-red-50 border border-red-100 p-6 rounded-3xl shadow-sm text-left">
-                  <h4 class="text-red-700 text-xs font-black uppercase tracking-widest mb-2">Fraud Probability</h4>
-                  <div class="text-5xl font-black text-red-600 mb-2">{{ fraudStats.cancelPercentage }}%</div>
-                  <div class="text-sm font-bold text-red-800 mt-2">Cancelled Orders: {{ fraudStats.totalCancel }} / {{ fraudStats.totalOrders }}</div>
-                  
-                  <!-- progress bar equivalent -->
-                  <div class="w-full bg-white rounded-full h-2 mt-4 overflow-hidden border border-red-100">
-                    <div class="bg-red-500 h-2 rounded-full transition-all duration-1000" :style="`width: ${fraudStats.cancelPercentage}%`"></div>
-                  </div>
+              <div
+                class="bg-gradient-to-br from-red-50 to-white border border-red-100 p-6 rounded-3xl shadow-sm text-left relative overflow-hidden group">
+                <div
+                  class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] font-black group-hover:scale-110 transition-transform select-none">
+                  RISK</div>
+                <h4
+                  class="text-red-700 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                  Fraud Probability
+                </h4>
+                <div class="text-5xl font-black text-red-600 mb-2">{{ fraudStats.cancelPercentage }}%</div>
+                <div class="text-[11px] font-bold text-red-800/60 mt-2 uppercase tracking-tight">Cancelled Orders: {{
+                  fraudStats.totalCancel }} / {{ fraudStats.totalOrders }}</div>
+
+                <div class="w-full bg-red-100/50 rounded-full h-1.5 mt-4 overflow-hidden border border-red-100/50">
+                  <div class="bg-red-500 h-full rounded-full transition-all duration-1000 ease-out"
+                    :style="`width: ${fraudStats.cancelPercentage}%`"></div>
+                </div>
               </div>
             </div>
-            
-            <div v-else-if="fraudStats && !fraudStats.hasData" class="p-6 bg-blue-50 text-blue-700 rounded-3xl font-bold border border-blue-100 text-center shadow-sm">
-              No delivery history found for this number.
+
+            <div v-else-if="fraudStats && !fraudStats.hasData"
+              class="p-8 bg-blue-50/50 text-blue-700 rounded-3xl font-black text-xs uppercase tracking-[0.2em] border border-blue-100 text-center shadow-sm">
+              No delivery history found for this number
             </div>
 
             <!-- Courier Details -->
-            <div v-if="fraudResult.data && fraudResult.data.couriers" class="bg-gray-50 rounded-3xl p-6 border border-gray-100 shadow-inner">
-              <h3 class="text-gray-900 font-black uppercase tracking-widest mb-4 text-xs border-b border-gray-200 pb-3 text-left">Courier breakdown</h3>
+            <div v-if="fraudResult.data" class="bg-gray-50/50 rounded-[2rem] p-6 border border-gray-100 shadow-inner">
+              <h3
+                class="text-gray-400 font-black uppercase tracking-[0.2em] mb-6 text-[10px] border-b border-gray-200/50 pb-4 text-left">
+                Courier breakdown</h3>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <template v-for="(data, name) in fraudResult.data.couriers" :key="name">
-                  <div class="bg-white p-5 rounded-2xl shadow-sm border transition-all hover:shadow-md text-left" :class="data.error ? 'border-red-200' : 'border-gray-200'">
-                    <div class="text-[10px] font-black uppercase tracking-widest mb-3 text-gray-500 flex justify-between items-center">
-                      <span>{{ name }}</span>
-                      <span v-if="data.error" class="text-red-500 text-sm" title="Data fetch error">⚠️ Error</span>
-                      <span v-else class="text-green-500 text-sm">✅ OK</span>
+                <template v-for="(data, name) in fraudResult.data" :key="name">
+                  <div v-if="['steadfast', 'pathao', 'redx'].includes(name)"
+                    class="bg-white p-5 rounded-2xl shadow-sm border transition-all hover:scale-[1.02] hover:shadow-md text-left"
+                    :class="data.error ? 'border-red-100' : 'border-gray-100'">
+
+                    <div class="flex justify-between items-center mb-4">
+                      <span class="text-xs font-black uppercase tracking-widest text-gray-900">{{ name }}</span>
+                      <div v-if="data.error"
+                        class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                      <div v-else class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                      </div>
                     </div>
-                    
-                    <div v-if="data.error" class="text-xs font-bold text-red-500 bg-red-50 p-2 rounded-lg">
+
+                    <div v-if="data.error"
+                      class="text-[10px] font-bold text-red-500 bg-red-50/50 p-3 rounded-xl border border-red-50 leading-relaxed">
                       {{ data.error }}
                     </div>
-                    <div v-else class="space-y-3">
-                      <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                        <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Total</span>
-                        <span class="font-black text-gray-900">{{ data.total }}</span>
+                    <div v-else class="space-y-4">
+                      <div class="flex justify-between items-end">
+                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Success</span>
+                        <div class="text-right">
+                          <span class="text-lg font-black text-emerald-600 leading-none">{{ data.success }}</span>
+                          <span class="text-[10px] font-bold text-gray-400 ml-1">/ {{ data.total }}</span>
+                        </div>
                       </div>
-                      <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                        <span class="text-emerald-600 font-bold text-xs uppercase tracking-wider">Success</span>
-                        <span class="font-black text-emerald-700">{{ data.success }}</span>
+                      <div class="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                        <div class="bg-emerald-500 h-full rounded-full" :style="`width: ${data.success_ratio || 0}%`">
+                        </div>
                       </div>
-                      <div class="flex justify-between items-center text-sm">
-                        <span class="text-red-600 font-bold text-xs uppercase tracking-wider">Cancelled</span>
-                        <span class="font-black text-red-700">{{ data.cancel }}</span>
+
+                      <div class="flex justify-between items-center pt-2 border-t border-gray-50">
+                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Cancelled</span>
+                        <span class="text-sm font-black text-red-500">{{ data.cancel }}</span>
                       </div>
                     </div>
                   </div>

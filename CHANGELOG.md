@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.19.0] - 2026-03-04
+
+### Added
+
+- **First Installation Protection**: Implemented a mandatory TDC license key verification view upon initial application install. Validates securely via TDC remote API locking unverified usage.
+- **Cloud Backup Management**: Fundamentally rewrote the Backup module to operate explicitly online. `Backup.vue` now utilizes the remote TDC Cloud API endpoints (`/api/tdc/upload-zip`, `/api/tdc/zips`) to securely sync the database and images offsite.
+
+### Changed
+
+- **Backup Fallback**: Restoring from a local archive has been moved to a fallback sub-menu to prioritize secure Cloud Restorations.
+
 ## [0.18.8] - 2026-03-02
 
 ### Added

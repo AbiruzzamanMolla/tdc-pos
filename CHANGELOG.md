@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.19.1] - 2026-03-04
+
+### Fixed
+
+- **Cloud Backup Connectivity**: Fixed API endpoint requests failing for cloud archives parsing by explicitly appending the `?token=` parameter to `/api/tdc/zips` as now required by the latest backend TDC API documentation updates.
+
 ## [0.19.0] - 2026-03-04
 
 ### Added

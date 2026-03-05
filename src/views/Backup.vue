@@ -396,7 +396,7 @@ onMounted(async () => {
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button v-if="!auth.isDemo" @click="restoreCloudBackup(b)" :disabled="loading"
-                    class="text-[10px] font-black text-indigo-600 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest ring-1 ring-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:ring-indigo-600 shadow-sm px-4 py-2 rounded-xl disabled:opacity-50 inline-flex items-center gap-2">
+                    class="text-[10px] font-black text-indigo-600 sm:opacity-0 sm:group-hover:opacity-100 transition-all uppercase tracking-widest ring-1 ring-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:ring-indigo-600 shadow-sm px-4 py-2 rounded-xl disabled:opacity-50 inline-flex items-center gap-2">
                     ⬇️ Retrieve
                   </button>
                 </td>

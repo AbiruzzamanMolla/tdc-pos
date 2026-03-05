@@ -1290,6 +1290,21 @@ pub fn get_activity_logs(limit: i64, offset: i64, db: State<Database>) -> Result
     Ok(logs)
 }
 
+#[tauri::command]
+pub fn delete_activity_logs(ids: Vec<i64>, db: State<Database>) -> Result<(), String> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    
+    let conn = db.conn.lock().unwrap();
+    let id_list: String = ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(",");
+    let query = format!("DELETE FROM activity_logs WHERE id IN ({})", id_list);
+    
+    conn.execute(&query, []).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
 // --- Expenses ---
 #[tauri::command]
 pub fn create_expense(expense: Expense, db: State<Database>) -> Result<(), String> {

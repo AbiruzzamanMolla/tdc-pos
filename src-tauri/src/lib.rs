@@ -73,6 +73,7 @@ pub fn run() {
             commands::update_user_role,
             commands::log_activity,
             commands::get_activity_logs,
+            commands::delete_activity_logs,
             commands::cleanup_database,
             commands::create_expense,
             commands::get_expenses,

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.21.1] - 2026-03-05
+
+### Added
+
+- **Activity Log**: Added the ability for Super Admins to select and delete activity logs via checkboxes and a "Select Page" tool.
+
+### Changed
+
+- **Roles & Permissions**: Expanded `demo` role access to allow viewing the Products page contents seamlessly without editing privileges.
+
+### Fixed
+
+- **Mobile UI**: Fixed an issue where the Cloud Backup "Retrieve" button was invisible on mobile devices.
+
 ## [0.21.0] - 2026-03-04
 
 ### Added

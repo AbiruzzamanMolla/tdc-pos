@@ -1,6 +1,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
+const selectedLogs = ref([]);
 
 const logs = ref([]);
 const loading = ref(false);
@@ -61,6 +65,32 @@ async function loadLogs() {
     }
 }
 
+async function deleteSelected() {
+    if (!confirm(`Are you sure you want to delete ${selectedLogs.value.length} logs?`)) return;
+    try {
+        loading.value = true;
+        await invoke('delete_activity_logs', { ids: selectedLogs.value });
+        selectedLogs.value = [];
+        await loadLogs();
+    } catch (err) {
+        console.error('Failed to delete logs', err);
+        alert('Failed to delete logs: ' + err);
+    } finally {
+        loading.value = false;
+    }
+}
+
+function toggleSelectAll(e) {
+    if (e.target.checked) {
+        const newIds = paginatedLogs.value.map(l => l.id);
+        const unique = new Set([...selectedLogs.value, ...newIds]);
+        selectedLogs.value = Array.from(unique);
+    } else {
+        const pageIds = new Set(paginatedLogs.value.map(l => l.id));
+        selectedLogs.value = selectedLogs.value.filter(id => !pageIds.has(id));
+    }
+}
+
 function getActionStyle(action) {
     return actionColors[action] || { bg: 'bg-gray-100', text: 'text-gray-600', dot: '⚪' };
 }
@@ -89,14 +119,25 @@ onMounted(() => loadLogs());
                 <h1 class="text-3xl font-black text-gray-900 tracking-tight">Activity Log</h1>
                 <p class="text-gray-400 text-sm font-medium">Track all system changes and user actions</p>
             </div>
-            <button @click="loadLogs" :disabled="loading"
-                class="bg-white border border-gray-200 hover:border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
-                🔄 Refresh
-            </button>
+            <div class="flex items-center gap-3">
+                <button v-if="auth.isSuperAdmin && selectedLogs.length > 0" @click="deleteSelected" :disabled="loading"
+                    class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
+                    🗑️ Delete Selected ({{ selectedLogs.length }})
+                </button>
+                <button @click="loadLogs" :disabled="loading"
+                    class="bg-white border border-gray-200 hover:border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
+                    🔄 Refresh
+                </button>
+            </div>
         </div>
 
         <!-- Filters -->
         <div class="flex flex-wrap gap-3">
+            <div v-if="auth.isSuperAdmin && paginatedLogs.length > 0" class="flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2.5">
+                <input type="checkbox" @change="toggleSelectAll" :checked="paginatedLogs.length > 0 && paginatedLogs.every(l => selectedLogs.includes(l.id))" 
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                <span class="ml-2 text-sm font-bold text-gray-700">Select Page</span>
+            </div>
             <input v-model="searchQuery" @input="currentPage = 1" type="text"
                 placeholder="Search by description or user..."
                 class="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -126,6 +167,13 @@ onMounted(() => loadLogs());
                 <div v-else class="divide-y divide-gray-50">
                     <div v-for="log in paginatedLogs" :key="log.id"
                         class="flex items-start gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                        
+                        <!-- Checkbox -->
+                        <div v-if="auth.isSuperAdmin" class="flex-shrink-0 mt-0.5">
+                            <input type="checkbox" v-model="selectedLogs" :value="log.id"
+                                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                        </div>
+
                         <!-- Action Icon -->
                         <div class="flex-shrink-0 mt-0.5 text-lg">
                             {{ getActionStyle(log.action).dot }}

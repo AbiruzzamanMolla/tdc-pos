@@ -19,7 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const canBuy = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager'].includes(role.value));
   const canSell = computed(() => ['super_admin', 'admin', 'manager', 'sell_manager'].includes(role.value));
   const canViewReports = computed(() => ['super_admin', 'admin', 'manager', 'report_checker', 'inspector', 'demo'].includes(role.value));
-  const canManageProducts = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager'].includes(role.value));
+  const canManageProducts = computed(() => ['super_admin', 'admin', 'manager', 'buy_manager', 'demo'].includes(role.value));
   const canViewStock = computed(() => !!role.value); // Everyone logged in
   const canViewActivityLog = computed(() => ['super_admin', 'admin', 'manager', 'inspector', 'demo'].includes(role.value));
 

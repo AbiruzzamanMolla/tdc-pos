@@ -57,17 +57,17 @@ const filteredProducts = computed(() => {
 });
 
 // Cart calculations
-const subtotal = computed(() => cart.value.reduce((sum, item) => sum + item.subtotal, 0));
+const subtotal = computed(() => Number(cart.value.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)));
 // Auto-calculated discount: difference between default selling price total and actual selling price total
 const autoDiscount = computed(() => {
   return cart.value.reduce((sum, item) => {
     const defaultTotal = item.default_selling_price * item.quantity;
     const actualTotal = item.selling_price * item.quantity;
     return sum + Math.max(0, defaultTotal - actualTotal);
-  }, 0);
+  }, 0).toFixed(2));
 });
 const grandTotal = computed(() => {
-  return subtotal.value + form.delivery_charge;
+  return Number((subtotal.value + form.delivery_charge).toFixed(2));
 });
 
 const historyTotalPages = computed(() => Math.ceil(orders.value.length / historyPerPage) || 1);
@@ -167,7 +167,7 @@ function addToCart(product) {
       return;
     }
     existing.quantity++;
-    existing.subtotal = existing.quantity * existing.selling_price;
+    existing.subtotal = Number((existing.quantity * existing.selling_price).toFixed(2));
   } else {
     cart.value.push({
       product_id: product.id,
@@ -186,14 +186,14 @@ function updateQuantity(item, delta) {
   const newQty = item.quantity + delta;
   if (newQty > 0 && newQty <= item.max_stock) {
     item.quantity = newQty;
-    item.subtotal = item.quantity * item.selling_price;
+    item.subtotal = Number((item.quantity * item.selling_price).toFixed(2));
   }
 }
 
 function handleQuantityInput(item) {
   if (typeof item.quantity === 'number') {
     if (item.quantity > item.max_stock) item.quantity = item.max_stock;
-    if (item.quantity > 0) item.subtotal = item.quantity * item.selling_price;
+    if (item.quantity > 0) item.subtotal = Number((item.quantity * item.selling_price).toFixed(2));
   }
 }
 
@@ -203,12 +203,12 @@ function handleQuantityBlur(item) {
   } else if (item.quantity > item.max_stock) {
     item.quantity = item.max_stock;
   }
-  item.subtotal = item.quantity * item.selling_price;
+  item.subtotal = Number((item.quantity * item.selling_price).toFixed(2));
 }
 
 function updatePrice(item) {
   if (item.selling_price < 0) item.selling_price = 0;
-  item.subtotal = item.quantity * item.selling_price;
+  item.subtotal = Number((item.quantity * item.selling_price).toFixed(2));
 }
 
 function removeFromCart(index) {

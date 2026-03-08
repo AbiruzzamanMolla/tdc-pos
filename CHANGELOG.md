@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2] - 2026-03-08
+
+### Fixed
+
+- **Dashboard**: Rounded monetary values like sales, purchases, and profits to 2 decimal places to prevent floating point inaccuracies.
+- **Buying & Selling**: Auto-generated prices, unit costs, and subtotals are now correctly rounded to 2 decimal places.
+
 ## [0.21.1] - 2026-03-05
 
 ### Added

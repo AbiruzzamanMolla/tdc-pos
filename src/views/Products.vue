@@ -38,7 +38,7 @@ const form = ref({
 const expectedSellingPrice = computed(() => {
   const buy = Number(form.value.buying_price) || 0;
   const percent = Number(form.value.profit_percentage) || 0;
-  return buy + (buy * (percent / 100));
+  return Number((buy + (buy * (percent / 100))).toFixed(2));
 });
 
 const showViewModal = ref(false);

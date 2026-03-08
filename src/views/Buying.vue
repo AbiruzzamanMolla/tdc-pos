@@ -42,7 +42,7 @@ const filteredProducts = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  return cart.value.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+  return Number(cart.value.reduce((sum, item) => sum + (item.subtotal || 0), 0).toFixed(2));
 });
 
 const historyTotalPages = computed(() => Math.ceil(purchases.value.length / historyPerPage) || 1);
@@ -121,10 +121,10 @@ function recalculateItem(item) {
   const extra = Number(item.extra_charge) || 0;
 
   if (qty > 0) {
-    item.subtotal = (qty * price) + extra;
-    item.purchase_unit_cost = item.subtotal / qty;
+    item.subtotal = Number(((qty * price) + extra).toFixed(2));
+    item.purchase_unit_cost = Number((item.subtotal / qty).toFixed(2));
   } else {
-    item.subtotal = extra;
+    item.subtotal = Number(extra.toFixed(2));
     item.purchase_unit_cost = 0;
   }
 }

@@ -99,30 +99,36 @@ const themes = {
     logoutHoverBg: 'rgba(220,38,38,0.2)', logoutHoverText: '#fca5a5',
   },
   dark: {
-    id: 'dark', name: 'Dark', emoji: '🖤',
-    sidebarBg: '#0a0a0a', sidebarBorder: '#1a1a1a', sidebarHover: '#1a1a1a',
-    sidebarUserBg: 'rgba(26,26,26,0.5)', sidebarSectionText: '#525252',
-    sidebarText: '#e5e5e5', sidebarMuted: '#737373',
-    sidebarFooterBg: 'rgba(0,0,0,0.4)', sidebarFooterText: '#525252',
-    accent: '#a78bfa', accentHover: '#8b5cf6', accentShadow: 'rgba(167,139,250,0.2)',
-    accentLight: '#2e1065', accentLightText: '#c4b5fd',
-    mainBg: '#121212', mainCardBg: '#1e1e1e', mainCardBorder: '#2a2a2a',
-    mainText: '#e5e5e5', mainTextSecondary: '#a3a3a3', mainMuted: '#525252',
-    mainInputBg: '#262626', mainInputBorder: '#3a3a3a', mainTableHeaderBg: '#1a1a1a',
-    mainBadgeBg: '#2a2a2a', mainBadgeText: '#d4d4d4',
-    btnPrimaryBg: '#7c3aed', btnPrimaryHover: '#6d28d9', btnPrimaryText: '#ffffff',
-    logoutBg: '#1a1a1a', logoutText: '#737373',
-    logoutHoverBg: 'rgba(220,38,38,0.2)', logoutHoverText: '#f87171',
+    id: 'dark', name: 'Dark', emoji: '🌌', isDark: true,
+    sidebarBg: '#0f172a', sidebarBorder: '#1e293b', sidebarHover: '#1e293b',
+    sidebarUserBg: 'rgba(30,41,59,0.5)', sidebarSectionText: '#64748b',
+    sidebarText: '#f8fafc', sidebarMuted: '#94a3b8',
+    sidebarFooterBg: 'rgba(2,6,23,0.4)', sidebarFooterText: '#64748b',
+    accent: '#8b5cf6', accentHover: '#7c3aed', accentShadow: 'rgba(139,92,246,0.3)',
+    accentLight: '#1e1b4b', accentLightText: '#c4b5fd',
+    mainBg: '#020617', mainCardBg: '#0f172a', mainCardBorder: '#1e293b',
+    mainText: '#f8fafc', mainTextSecondary: '#cbd5e1', mainMuted: '#64748b',
+    mainInputBg: '#1e293b', mainInputBorder: '#334155', mainTableHeaderBg: '#0f172a',
+    mainBadgeBg: '#1e293b', mainBadgeText: '#cbd5e1',
+    btnPrimaryBg: '#6366f1', btnPrimaryHover: '#4f46e5', btnPrimaryText: '#ffffff',
+    logoutBg: '#1e293b', logoutText: '#94a3b8',
+    logoutHoverBg: 'rgba(239,68,68,0.15)', logoutHoverText: '#f87171',
   }
 };
 
 function applyThemeToDOM(theme) {
   const root = document.documentElement;
   Object.entries(theme).forEach(([key, value]) => {
-    if (key === 'id' || key === 'name' || key === 'emoji') return;
+    if (key === 'id' || key === 'name' || key === 'emoji' || key === 'isDark') return;
     const cssVar = '--t-' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
     root.style.setProperty(cssVar, value);
   });
+
+  if (theme.isDark) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
 }
 
 export const useThemeStore = defineStore('theme', () => {

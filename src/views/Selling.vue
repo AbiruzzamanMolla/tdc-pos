@@ -60,7 +60,7 @@ const filteredProducts = computed(() => {
 const subtotal = computed(() => Number(cart.value.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)));
 // Auto-calculated discount: difference between default selling price total and actual selling price total
 const autoDiscount = computed(() => {
-  return cart.value.reduce((sum, item) => {
+  return Number(cart.value.reduce((sum, item) => {
     const defaultTotal = item.default_selling_price * item.quantity;
     const actualTotal = item.selling_price * item.quantity;
     return sum + Math.max(0, defaultTotal - actualTotal);

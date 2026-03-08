@@ -71,13 +71,28 @@ pub fn get_product_images(product_id: i64, db: State<Database>) -> Result<Vec<St
 }
 
 #[tauri::command]
-pub fn read_image_base64(path: String) -> Result<String, String> {
-    let file_path = std::path::Path::new(&path);
+pub fn read_image_base64(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
+    let mut file_path = std::path::PathBuf::from(&path);
+    
     if !file_path.exists() {
-        return Err(format!("File not found: {}", path));
+        // Fallback for cross-device database restores where the absolute path is wrong.
+        if let Some(file_name) = file_path.file_name() {
+            if let Ok(app_dir) = app_handle.path().app_data_dir() {
+                let fallback_path = app_dir.join("images").join(file_name);
+                if fallback_path.exists() {
+                    file_path = fallback_path;
+                } else {
+                    return Err(format!("File not found: {}", path));
+                }
+            } else {
+                return Err(format!("File not found: {}", path));
+            }
+        } else {
+            return Err(format!("File not found: {}", path));
+        }
     }
     
-    let data = std::fs::read(file_path).map_err(|e| e.to_string())?;
+    let data = std::fs::read(&file_path).map_err(|e| e.to_string())?;
     let base64_data = base64_encode(&data);
     
     let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_lowercase();

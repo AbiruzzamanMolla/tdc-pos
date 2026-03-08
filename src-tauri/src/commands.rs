@@ -72,23 +72,26 @@ pub fn get_product_images(product_id: i64, db: State<Database>) -> Result<Vec<St
 
 #[tauri::command]
 pub fn read_image_base64(path: String, app_handle: tauri::AppHandle) -> Result<String, String> {
-    let mut file_path = std::path::PathBuf::from(&path);
+    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    
+    // Determine the actual path to try
+    let mut file_path = if std::path::Path::new(&path).is_absolute() {
+        std::path::PathBuf::from(&path)
+    } else {
+        // Assume relative to app_dir if not absolute
+        app_dir.join(&path)
+    };
     
     if !file_path.exists() {
         // Fallback for cross-device database restores where the absolute path is wrong.
-        if let Some(file_name) = file_path.file_name() {
-            if let Ok(app_dir) = app_handle.path().app_data_dir() {
-                let fallback_path = app_dir.join("images").join(file_name);
-                if fallback_path.exists() {
-                    file_path = fallback_path;
-                } else {
-                    return Err(format!("File not found: {}", path));
-                }
-            } else {
-                return Err(format!("File not found: {}", path));
-            }
+        // We need to extract the filename regardless of whether it used \ or / as a separator.
+        let file_name = path.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(&path);
+        
+        let fallback_path = app_dir.join("images").join(file_name);
+        if fallback_path.exists() {
+            file_path = fallback_path;
         } else {
-            return Err(format!("File not found: {}", path));
+            return Err(format!("File not found: {}. Tried fallback: {:?}", path, fallback_path));
         }
     }
     
@@ -147,9 +150,11 @@ fn save_images(app: &AppHandle, images: Vec<String>) -> Result<Vec<String>, Stri
 
     let mut saved_paths = Vec::new();
     for (i, path) in images.iter().enumerate() {
-        // If already in our images dir, keep as-is
-        if path.starts_with(&images_dir_str) {
-            saved_paths.push(path.clone());
+        // If already in our images dir (either absolute or relative), keep as relative
+        if path.starts_with("images/") || path.starts_with("images\\") || path.starts_with(&images_dir_str) {
+            // Normalize to relative path 'images/filename'
+            let filename = path.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(path);
+            saved_paths.push(format!("images/{}", filename));
             continue;
         }
 
@@ -158,13 +163,15 @@ fn save_images(app: &AppHandle, images: Vec<String>) -> Result<Vec<String>, Stri
             let ext = source_path.extension().and_then(|e| e.to_str()).unwrap_or("png");
             let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros();
             let new_filename = format!("{}_{}.{}", timestamp, i, ext);
-            let dest_path = images_dir.join(new_filename);
+            let dest_path = images_dir.join(&new_filename);
             
             std::fs::copy(source_path, &dest_path).map_err(|e| e.to_string())?;
-            saved_paths.push(dest_path.to_string_lossy().to_string());
+            saved_paths.push(format!("images/{}", new_filename));
         } else {
-            // Path doesn't exist and not in our dir — skip silently
-            saved_paths.push(path.clone());
+            // Path doesn't exist and not in our dir.
+            // If it looks like a relative path to images/ already, keep it, otherwise just keep as-is
+            let filename = path.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(path);
+            saved_paths.push(format!("images/{}", filename));
         }
     }
     Ok(saved_paths)

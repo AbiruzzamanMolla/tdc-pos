@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1] - 2026-03-08
+
+### Fixed
+
+- **Android Backup Restore**: Fixed product image restore not working when restoring a Windows backup on Android due to absolute path and separator mismatches.
+- **Path Portability**: System now stores relative image paths for improved database portability across different operating systems.
+
 ## [0.22.0] - 2026-03-08
 
 ### Added

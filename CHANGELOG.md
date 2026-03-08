@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.22.0] - 2026-03-08
+
+### Added
+
+- **Multi-Language Support (i18n)**: Full Bengali (বাংলা) language support across the entire application. Users can toggle between English and Bengali using the language switcher.
+- **Translations**: Dashboard, Sidebar Navigation, Selling, Buying, Products, Expenses, Stocks, Reports, Backup, Settings, Users, and Activity Log views are now translatable.
+- **i18n Store**: Centralized translation store (`src/stores/i18n.js`) with 160+ keys in both English and Bengali.
+
+### Changed
+
+- **Build Optimization**: Added Vite `manualChunks` configuration to split large vendor bundles (Vue, jsPDF, JSZip) into separate chunks, eliminating the 500 kB chunk size warning.
+- **Dark Theme**: Upgraded dark mode color scheme to a premium Slate aesthetic with improved contrast and readability.
+
+### Fixed
+
+- **Backup Restore**: Fixed product image restore not working during backup restoration.
+- **Selling View**: Fixed structural HTML issues (unclosed tags, broken string literals) that caused Vue compilation errors.
+
 ## [0.21.2] - 2026-03-08
 
 ### Fixed

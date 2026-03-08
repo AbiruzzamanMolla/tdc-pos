@@ -2,6 +2,7 @@
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
+import { useI18nStore } from './stores/i18n'
 import { computed, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { readFile, writeFile, readDir, remove, BaseDirectory, exists } from '@tauri-apps/plugin-fs';
@@ -13,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const theme = useThemeStore()
+const i18n = useI18nStore()
 
 // Navigation & Sidebar Logic
 const isSidebarOpen = ref(window.innerWidth >= 1024)
@@ -162,8 +164,9 @@ function logout() {
             {{ auth.user?.username?.charAt(0) || 'U' }}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold truncate sidebar-text">{{ auth.user?.username || 'Guest' }}</p>
-            <p class="text-[10px] uppercase font-black tracking-widest sidebar-muted">{{ auth.user?.role || 'User' }}
+            <p class="text-sm font-bold truncate sidebar-text">{{ auth.user?.username || i18n.t('guest') }}</p>
+            <p class="text-[10px] uppercase font-black tracking-widest sidebar-muted">{{ auth.user?.role ||
+              i18n.t('user') }}
             </p>
           </div>
         </div>
@@ -173,66 +176,67 @@ function logout() {
       <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
         <RouterLink to="/" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">/</span>
-          <span class="font-medium">Dashboard</span>
+          <span class="font-medium">{{ i18n.t('dashboard') }}</span>
         </RouterLink>
 
         <!-- Inventory -->
-        <div v-if="auth.canManageProducts || auth.canViewStock" class="nav-section">Inventory</div>
+        <div v-if="auth.canManageProducts || auth.canViewStock" class="nav-section">{{ i18n.t('inventory') }}</div>
         <RouterLink v-if="auth.canManageProducts" to="/products" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">P</span>
-          <span class="font-medium">Products</span>
+          <span class="font-medium">{{ i18n.t('products') }}</span>
         </RouterLink>
         <RouterLink v-if="auth.canViewStock" to="/stocks" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">S</span>
-          <span class="font-medium">Stock List</span>
+          <span class="font-medium">{{ i18n.t('stock_list') }}</span>
         </RouterLink>
 
         <!-- Transaction -->
-        <div v-if="auth.canBuy || auth.canSell" class="nav-section">Transaction</div>
+        <div v-if="auth.canBuy || auth.canSell" class="nav-section">{{ i18n.t('transaction') }}</div>
         <RouterLink v-if="auth.canBuy" to="/buying" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">B</span>
-          <span class="font-medium">Buying</span>
+          <span class="font-medium">{{ i18n.t('buying') }}</span>
         </RouterLink>
         <RouterLink v-if="auth.canSell" to="/selling" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">S</span>
-          <span class="font-medium">Selling</span>
+          <span class="font-medium">{{ i18n.t('selling') }}</span>
         </RouterLink>
         <RouterLink to="/expenses" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">E</span>
-          <span class="font-medium">Expenses</span>
+          <span class="font-medium">{{ i18n.t('expenses') }}</span>
         </RouterLink>
 
         <!-- Utilities -->
-        <div v-if="auth.canViewReports || auth.canManageBackup || auth.canManageSettings" class="nav-section">Utilities
+        <div v-if="auth.canViewReports || auth.canManageBackup || auth.canManageSettings" class="nav-section">{{
+          i18n.t('utilities') }}
         </div>
         <RouterLink v-if="auth.canViewReports" to="/reports" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">R</span>
-          <span class="font-medium">Reports</span>
+          <span class="font-medium">{{ i18n.t('reports') }}</span>
         </RouterLink>
         <RouterLink v-if="auth.canManageBackup" to="/backup" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">B</span>
-          <span class="font-medium">Backup</span>
+          <span class="font-medium">{{ i18n.t('backup') }}</span>
         </RouterLink>
         <RouterLink v-if="auth.canManageSettings" to="/settings" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">S</span>
-          <span class="font-medium">Settings</span>
+          <span class="font-medium">{{ i18n.t('settings') }}</span>
         </RouterLink>
 
-        <div class="nav-section">Assistant</div>
+        <div class="nav-section">{{ i18n.t('assistant') }}</div>
         <RouterLink to="/chat" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">🤖</span>
-          <span class="font-medium">AI Chat</span>
+          <span class="font-medium">{{ i18n.t('ai_chat') }}</span>
         </RouterLink>
 
         <!-- Administration -->
-        <div v-if="auth.canManageUsers || auth.canViewActivityLog" class="nav-section">System</div>
+        <div v-if="auth.canManageUsers || auth.canViewActivityLog" class="nav-section">{{ i18n.t('system') }}</div>
         <RouterLink v-if="auth.canManageUsers" to="/users" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">U</span>
-          <span class="font-medium">Users</span>
+          <span class="font-medium">{{ i18n.t('users') }}</span>
         </RouterLink>
         <RouterLink v-if="auth.canViewActivityLog" to="/activity-log" class="nav-link" active-class="nav-link-active">
           <span class="nav-icon">A</span>
-          <span class="font-medium">Activity Log</span>
+          <span class="font-medium">{{ i18n.t('activity_log') }}</span>
         </RouterLink>
       </nav>
 
@@ -241,7 +245,7 @@ function logout() {
         <button @click="theme.showPicker = !theme.showPicker"
           class="flex items-center w-full px-4 py-2.5 rounded-xl transition-all text-sm font-bold sidebar-theme-btn">
           <span class="mr-2">🎨</span>
-          <span>Theme</span>
+          <span>{{ i18n.t('theme') }}</span>
           <span class="ml-auto text-lg">{{ theme.currentTheme().emoji }}</span>
         </button>
 
@@ -252,12 +256,12 @@ function logout() {
             :class="theme.currentThemeId === t.id ? 'ring-2 ring-offset-1 sidebar-theme-active' : 'opacity-60 hover:opacity-100'"
             :style="`--ring-color: ${t.accent}; ring-color: ${t.accent};`">
             <span class="text-lg mb-0.5">{{ t.emoji }}</span>
-            <span class="sidebar-muted">{{ t.name }}</span>
+            <span class="sidebar-muted">{{ i18n.locale === 'bn' ? t.name : t.name }}</span>
           </button>
         </div>
 
         <button @click="logout" class="sidebar-logout-btn">
-          <span class="mr-2">Logout</span>
+          <span class="mr-2">{{ i18n.t('logout') }}</span>
         </button>
       </div>
 

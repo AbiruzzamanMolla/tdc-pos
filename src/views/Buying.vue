@@ -6,8 +6,10 @@ import { confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
 import { useAuthStore } from '../stores/auth';
+import { useI18nStore } from '../stores/i18n';
 
 const auth = useAuthStore();
+const i18n = useI18nStore();
 
 const viewMode = ref('new');
 const purchases = ref([]);
@@ -308,18 +310,18 @@ onMounted(() => {
     <!-- Header Toggle -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 px-1">
       <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-        {{ viewMode === 'new' ? 'Product Procurement' : 'Procurement History' }}
+        {{ viewMode === 'new' ? i18n.t('buying') : i18n.t('purchase_history') }}
       </h1>
       <div class="bg-gray-100 p-1 rounded-xl flex text-sm font-bold shadow-inner">
         <button v-if="!auth.isDemo" @click="viewMode = 'new'"
           :class="{ 'bg-white shadow-sm text-blue-600': viewMode === 'new', 'text-gray-500 hover:text-gray-700': viewMode !== 'new' }"
           class="px-6 py-2 rounded-lg transition-all active:scale-95">
-          New Purchase
+          {{ i18n.t('new_purchase') }}
         </button>
         <button @click="viewMode = 'history'"
           :class="{ 'bg-white shadow-sm text-blue-600': viewMode === 'history', 'text-gray-500 hover:text-gray-700': viewMode !== 'history' }"
           class="px-6 py-2 rounded-lg transition-all active:scale-95">
-          History
+          {{ i18n.t('history') }}
         </button>
       </div>
     </div>
@@ -333,11 +335,11 @@ onMounted(() => {
             d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
             clip-rule="evenodd" />
         </svg>
-        You are currently editing Purchase #{{ editingPurchaseId }}
+        {{ i18n.t('editing_purchase') }} #{{ editingPurchaseId }}
       </div>
       <button @click="cancelEdit"
         class="text-xs font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors bg-amber-200/50 px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-200">
-        Cancel Edit
+        {{ i18n.t('cancel_edit') }}
       </button>
     </div>
 
@@ -348,7 +350,7 @@ onMounted(() => {
       <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-0">
         <div class="p-4 border-b border-gray-50 bg-gray-50/30">
           <div class="relative">
-            <input v-model="searchQuery" type="text" placeholder="Search by name or code..."
+            <input v-model="searchQuery" type="text" :placeholder="i18n.t('search_products')"
               class="w-full border border-gray-200 rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm transition-all shadow-sm">
             <span class="absolute left-3 top-3.5 text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -372,13 +374,14 @@ onMounted(() => {
               <h3 class="font-extrabold text-gray-900 text-sm truncate mb-1 text-left">{{ product.product_name }}</h3>
               <div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-50">
                 <div class="flex flex-col">
-                  <span class="text-[10px] uppercase text-gray-400 font-black tracking-widest">Avg Cost</span>
+                  <span class="text-[10px] uppercase text-gray-400 font-black tracking-widest">{{ i18n.t('buy_price')
+                    }}</span>
                   <span class="text-blue-600 font-black text-sm">{{ currencySymbol }}{{ (product.buying_price ||
                     0).toFixed(2) }}</span>
                 </div>
                 <div class="text-right">
-                  <span
-                    class="text-[10px] uppercase text-gray-400 font-black tracking-widest block text-left">Stock</span>
+                  <span class="text-[10px] uppercase text-gray-400 font-black tracking-widest block text-left">{{
+                    i18n.t('stock') }}</span>
                   <span
                     class="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 font-bold border border-gray-200">
                     {{ product.stock_quantity }}
@@ -408,36 +411,36 @@ onMounted(() => {
         class="w-full xl:w-[450px] flex flex-col bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden flex-shrink-0 max-h-[60vh] xl:max-h-full">
         <div
           class="p-4 border-b bg-gray-900 text-white font-black text-xs uppercase tracking-widest flex justify-between items-center">
-          <span>Purchase Cart</span>
-          <span class="bg-white/20 px-2 py-1 rounded-lg text-[10px]">{{ cart.length }} Items</span>
+          <span>{{ i18n.t('cart') }}</span>
+          <span class="bg-white/20 px-2 py-1 rounded-lg text-[10px]">{{ cart.length }} {{ i18n.t('items') }}</span>
         </div>
 
         <!-- Supplier & Invoice Info -->
         <div class="p-4 border-b bg-gray-50/50 space-y-4 text-left">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Supplier
-                Name</label>
+              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{
+                i18n.t('supplier_name') }}</label>
               <input v-model="form.supplier_name" type="text" placeholder="John Doe / Acme Corp"
                 class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
             </div>
             <div>
-              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Invoice
-                Number</label>
+              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{
+                i18n.t('purchase_id') }}</label>
               <input v-model="form.invoice_number" type="text" placeholder="PUR-2024-001"
                 class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
             </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Phone
-                Number</label>
+              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{
+                i18n.t('phone_number') }}</label>
               <input v-model="form.supplier_phone" type="text" placeholder="+880..."
                 class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
             </div>
             <div>
-              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Purchase
-                Date</label>
+              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{
+                i18n.t('date') }}</label>
               <input v-model="form.purchase_date" type="date"
                 class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-sm">
             </div>
@@ -463,7 +466,7 @@ onMounted(() => {
 
             <div class="grid grid-cols-3 gap-3">
               <div class="flex flex-col gap-1 text-left">
-                <span class="text-[9px] uppercase text-gray-400 font-black">Quantity</span>
+                <span class="text-[9px] uppercase text-gray-400 font-black">{{ i18n.t('quantity') }}</span>
                 <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm">
                   <button @click="updateQuantity(item, -1)"
                     class="px-2 py-1 text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all">-</button>
@@ -476,7 +479,7 @@ onMounted(() => {
               </div>
 
               <div class="flex flex-col gap-1 text-left">
-                <span class="text-[9px] uppercase text-gray-400 font-black">Unit Price</span>
+                <span class="text-[9px] uppercase text-gray-400 font-black">{{ i18n.t('price') }}</span>
                 <div class="relative">
                   <input type="number" v-model.number="item.buying_price" @input="updatePrice(item)"
                     class="w-full border border-gray-200 rounded-lg pl-5 pr-2 py-1 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
@@ -486,7 +489,7 @@ onMounted(() => {
               </div>
 
               <div class="flex flex-col gap-1 text-left">
-                <span class="text-[9px] uppercase text-gray-400 font-black">Extra Charge</span>
+                <span class="text-[9px] uppercase text-gray-400 font-black">{{ i18n.t('extra_charge') }}</span>
                 <div class="relative">
                   <input type="number" v-model.number="item.extra_charge" @input="updateExtraCharge(item)"
                     class="w-full border border-gray-200 rounded-lg pl-5 pr-2 py-1 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm border-amber-100"
@@ -499,12 +502,14 @@ onMounted(() => {
             <div
               class="mt-4 pt-3 border-t border-dashed border-gray-200 flex justify-between items-center bg-white/50 px-2 py-2 rounded-xl border border-gray-50 shadow-inner">
               <div class="flex flex-col text-left">
-                <span class="text-[9px] uppercase text-amber-500 font-black tracking-widest">Landed Cost/Unit</span>
+                <span class="text-[9px] uppercase text-amber-500 font-black tracking-widest">{{ i18n.t('buy_price')
+                  }}/{{ i18n.t('quantity') }}</span>
                 <span class="text-xs font-black text-amber-600 font-mono">{{ currencySymbol }}{{
                   (item.purchase_unit_cost || 0).toFixed(2) }}</span>
               </div>
               <div class="text-right">
-                <span class="text-[9px] uppercase text-gray-400 font-black tracking-widest block">Line Total</span>
+                <span class="text-[9px] uppercase text-gray-400 font-black tracking-widest block">{{ i18n.t('subtotal')
+                  }}</span>
                 <span class="font-black text-sm text-gray-900 font-mono">{{ currencySymbol }}{{ (item.subtotal ||
                   0).toFixed(2) }}</span>
               </div>
@@ -526,8 +531,8 @@ onMounted(() => {
 
         <!-- Notes -->
         <div class="p-4 border-t bg-white text-left">
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Purchase
-            Notes</label>
+          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{ i18n.t('notes')
+            }}</label>
           <textarea v-model="form.notes" rows="2" placeholder="Any internal notes or supplier remarks..."
             class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-sm"></textarea>
         </div>
@@ -535,13 +540,13 @@ onMounted(() => {
         <!-- Footer -->
         <div class="p-5 bg-gradient-to-t from-gray-50 to-white border-t space-y-4">
           <div class="flex justify-between items-center text-left">
-            <span class="text-xs font-black text-gray-400 uppercase tracking-widest">Grand Total</span>
+            <span class="text-xs font-black text-gray-400 uppercase tracking-widest">{{ i18n.t('total') }}</span>
             <span class="text-3xl font-black text-gray-900 font-mono">{{ currencySymbol }}{{ totalAmount.toFixed(2)
             }}</span>
           </div>
           <button @click="savePurchase" :disabled="cart.length === 0"
             class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-blue-700 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all uppercase tracking-widest">
-            {{ editingPurchaseId ? 'Update Purchase & Stock' : 'Confirm & Update Stock' }}
+            {{ editingPurchaseId ? i18n.t('update_purchase') : i18n.t('process_purchase') }}
           </button>
         </div>
       </div>
@@ -554,12 +559,12 @@ onMounted(() => {
         <thead
           class="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest sticky top-0 z-10 border-b border-gray-100">
           <tr>
-            <th class="p-4">Date</th>
-            <th class="p-4">Supplier</th>
-            <th class="p-4">Invoice Number</th>
-            <th class="p-4 text-right">Grand Total</th>
-            <th class="p-4">Notes</th>
-            <th class="p-4 text-center">Actions</th>
+            <th class="p-4">{{ i18n.t('date') }}</th>
+            <th class="p-4">{{ i18n.t('supplier') }}</th>
+            <th class="p-4">{{ i18n.t('purchase_id') }}</th>
+            <th class="p-4 text-right">{{ i18n.t('total') }}</th>
+            <th class="p-4">{{ i18n.t('notes') }}</th>
+            <th class="p-4 text-center">{{ i18n.t('actions') }}</th>
           </tr>
         </thead>
         <tbody class="text-gray-700 text-sm font-medium">
@@ -576,16 +581,20 @@ onMounted(() => {
             <td class="p-4 text-center">
               <div class="flex justify-center gap-2">
                 <button v-if="!auth.isDemo" @click="editPurchase(purchase)"
-                  class="bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Edit</button>
+                  class="bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">{{
+                  i18n.t('edit') }}</button>
                 <button @click="viewPurchaseDetails(purchase)"
-                  class="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Details</button>
+                  class="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">{{
+                    i18n.t('details') }}</button>
                 <button v-if="!auth.isDemo" @click="deletePurchase(purchase)"
-                  class="bg-white text-red-400 hover:bg-red-500 hover:text-white border border-red-50 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">Delete</button>
+                  class="bg-white text-red-400 hover:bg-red-500 hover:text-white border border-red-50 px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase transition-all shadow-sm">{{
+                    i18n.t('delete') }}</button>
               </div>
             </td>
           </tr>
           <tr v-if="purchases.length === 0">
-            <td colspan="6" class="p-16 text-center text-gray-300 italic font-medium">No procurement records discovered.
+            <td colspan="6" class="p-16 text-center text-gray-300 italic font-medium">{{ i18n.t('no_purchase_history')
+              }}
             </td>
           </tr>
         </tbody>
@@ -618,7 +627,7 @@ onMounted(() => {
           class="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors text-2xl z-10 p-1">✕</button>
 
         <div class="mb-6 border-b border-gray-50 pb-4">
-          <h2 class="text-2xl font-black text-gray-900 mb-1">Purchase Details</h2>
+          <h2 class="text-2xl font-black text-gray-900 mb-1">{{ i18n.t('purchase_details') }}</h2>
           <div class="flex gap-4 items-center">
             <span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-bold border border-blue-100">INV: {{
               selectedPurchase.invoice_number || 'N/A' }}</span>
@@ -628,8 +637,8 @@ onMounted(() => {
 
         <div class="grid grid-cols-2 gap-6 mb-8 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 text-xs">
           <div>
-            <span
-              class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 text-left">Supplier</span>
+            <span class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 text-left">{{
+              i18n.t('supplier') }}</span>
             <span class="text-sm font-extrabold text-gray-900">{{ selectedPurchase.supplier_name || 'N/A' }}</span>
           </div>
           <div class="text-right text-left">
@@ -645,12 +654,12 @@ onMounted(() => {
             <thead
               class="bg-white text-gray-400 uppercase text-[9px] font-black tracking-tighter border-b border-gray-100 sticky top-0">
               <tr>
-                <th class="p-3">Product Name</th>
-                <th class="p-3 text-right">Qty</th>
-                <th class="p-3 text-right">Unit Price</th>
-                <th class="p-3 text-right text-amber-500">Extra</th>
-                <th class="p-3 text-right text-blue-600">Landed</th>
-                <th class="p-3 text-right">Subtotal</th>
+                <th class="p-3">{{ i18n.t('product_name') }}</th>
+                <th class="p-3 text-right">{{ i18n.t('quantity') }}</th>
+                <th class="p-3 text-right">{{ i18n.t('price') }}</th>
+                <th class="p-3 text-right text-amber-500">{{ i18n.t('extra_charge') }}</th>
+                <th class="p-3 text-right text-blue-600">{{ i18n.t('buy_price') }}</th>
+                <th class="p-3 text-right">{{ i18n.t('subtotal') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -678,8 +687,8 @@ onMounted(() => {
           </div>
           <div class="flex justify-between items-center text-left">
             <div class="flex flex-col text-left">
-              <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Procurement Cost</span>
-              <span class="text-xs text-gray-500 italic">Incl. all extra charges</span>
+              <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ i18n.t('total') }}</span>
+              <span class="text-xs text-gray-500 italic">{{ i18n.t('extra_charge') }}</span>
             </div>
             <div class="text-3xl font-black text-gray-900 font-mono">{{ currencySymbol }}{{
               (selectedPurchase.total_amount || 0).toFixed(2) }}</div>
@@ -689,7 +698,7 @@ onMounted(() => {
         <div class="mt-8 flex justify-end">
           <button @click="showDetailsModal = false"
             class="px-10 py-3 bg-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-gray-800 transition-all active:scale-95">
-            Close
+            {{ i18n.t('close') }}
           </button>
         </div>
       </div>

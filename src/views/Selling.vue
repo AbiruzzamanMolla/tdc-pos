@@ -6,8 +6,10 @@ import { confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
 import { useAuthStore } from '../stores/auth';
+import { useI18nStore } from '../stores/i18n';
 
 const auth = useAuthStore();
+const i18n = useI18nStore();
 
 const viewMode = ref('pos');
 const products = ref([]);
@@ -349,18 +351,18 @@ onMounted(() => {
     <!-- Header Toggle -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-1">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-        {{ viewMode === 'pos' ? 'Selling' : 'Sales History' }}
+        {{ viewMode === 'pos' ? i18n.t('selling') : i18n.t('sales_history') }}
       </h1>
       <div class="bg-gray-200 p-1 rounded-lg flex text-sm font-medium">
         <button v-if="!auth.isDemo" @click="viewMode = 'pos'"
           :class="{ 'bg-white shadow text-blue-600': viewMode === 'pos', 'text-gray-500 hover:text-gray-700': viewMode !== 'pos' }"
           class="px-4 py-2 rounded-md transition-all">
-          New Sale
+          {{ i18n.t('new_sale') }}
         </button>
         <button @click="viewMode = 'history'"
           :class="{ 'bg-white shadow text-blue-600': viewMode === 'history', 'text-gray-500 hover:text-gray-700': viewMode !== 'history' }"
           class="px-4 py-2 rounded-md transition-all">
-          History
+          {{ i18n.t('history') }}
         </button>
       </div>
     </div>
@@ -374,11 +376,11 @@ onMounted(() => {
             d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
             clip-rule="evenodd" />
         </svg>
-        You are currently editing Sale #{{ editingOrderId }}
+        <span>{{ i18n.t('editing_sale') }} #{{ editingOrderId }}</span>
       </div>
       <button @click="cancelEdit"
         class="text-xs font-bold uppercase text-amber-600 hover:text-amber-800 transition-colors bg-white px-3 py-1.5 rounded border border-amber-200 hover:bg-amber-100">
-        Cancel Edit
+        {{ i18n.t('cancel_edit') }}
       </button>
     </div>
 
@@ -388,7 +390,7 @@ onMounted(() => {
       <!-- Left: Products -->
       <div class="flex-1 flex flex-col bg-white rounded-lg shadow overflow-hidden min-h-0">
         <div class="p-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
-          <input v-model="searchQuery" type="text" placeholder="Search products..."
+          <input v-model="searchQuery" type="text" :placeholder="i18n.t('search_products')"
             class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none text-sm">
           <select v-model="selectedCategory"
             class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:outline-none bg-white text-sm">
@@ -412,7 +414,7 @@ onMounted(() => {
                   product.default_selling_price.toFixed(2) }}</span>
                 <span class="text-xs px-1.5 py-0.5 rounded-full"
                   :class="product.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                  {{ product.stock_quantity }}
+                  {{ product.stock_quantity > 0 ? product.stock_quantity : i18n.t('out_of_stock') }}
                 </span>
               </div>
             </div>
@@ -428,7 +430,7 @@ onMounted(() => {
             </button>
           </div>
           <div v-if="filteredProducts.length === 0" class="col-span-full text-center text-gray-400 py-8">
-            No products found.
+            {{ i18n.t('no_products') }}
           </div>
         </div>
       </div>
@@ -437,8 +439,8 @@ onMounted(() => {
       <div
         class="w-full xl:w-96 flex flex-col bg-white rounded-lg shadow overflow-hidden flex-shrink-0 max-h-[50vh] xl:max-h-full">
         <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 text-sm flex justify-between items-center">
-          <span>Cart</span>
-          <span class="bg-gray-200 px-2 py-0.5 rounded text-xs">{{ cart.length }} items</span>
+          <span>{{ i18n.t('cart') }}</span>
+          <span class="bg-gray-200 px-2 py-0.5 rounded text-xs">{{ cart.length }} {{ i18n.t('items') }}</span>
         </div>
 
         <div class="flex-1 overflow-y-auto p-3 space-y-3">
@@ -474,47 +476,48 @@ onMounted(() => {
               <span class="font-bold text-sm text-gray-800">{{ currencySymbol }}{{ item.subtotal.toFixed(2) }}</span>
             </div>
             <div v-if="item.selling_price < item.default_selling_price" class="text-xs text-orange-500 mt-1">
-              Discount: {{ currencySymbol }}{{ ((item.default_selling_price - item.selling_price) *
+              {{ i18n.t('discount') }}: {{ currencySymbol }}{{ ((item.default_selling_price - item.selling_price) *
                 item.quantity).toFixed(2) }}
             </div>
           </div>
           <div v-if="cart.length === 0" class="text-center text-gray-400 mt-8 text-sm">
-            Click products to add to cart
+            {{ i18n.t('click_to_add') }}
           </div>
         </div>
 
         <div class="p-3 bg-gray-50 border-t space-y-1 text-sm">
           <div class="flex justify-between text-gray-600">
-            <span>Subtotal</span>
+            <span>{{ i18n.t('subtotal') }}</span>
             <span>{{ currencySymbol }}{{ subtotal.toFixed(2) }}</span>
           </div>
           <div v-if="autoDiscount > 0" class="flex justify-between text-orange-600">
-            <span>Price Discount</span>
+            <span>{{ i18n.t('price_discount') }}</span>
             <span>-{{ currencySymbol }}{{ autoDiscount.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between text-xl font-bold text-gray-800 pt-2 border-t border-gray-200">
-            <span>Total</span>
+            <span>{{ i18n.t('total') }}</span>
             <span>{{ currencySymbol }}{{ grandTotal.toFixed(2) }}</span>
           </div>
           <button @click="openCheckout" :disabled="cart.length === 0"
             class="w-full mt-3 bg-blue-600 text-white py-2.5 rounded-lg font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition text-sm">
-            Proceed to Checkout
+            {{ i18n.t('checkout') }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- HISTORY VIEW -->
-    <div v-else class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-x-auto overflow-y-auto">
+    <div v-if="viewMode === 'history'"
+      class="bg-white rounded-lg shadow overflow-hidden flex-1 overflow-x-auto overflow-y-auto">
       <table class="w-full text-left border-collapse min-w-[600px]">
         <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-10">
           <tr>
-            <th class="p-3 border-b">ID</th>
-            <th class="p-3 border-b">Date</th>
-            <th class="p-3 border-b">Customer</th>
-            <th class="p-3 border-b text-right">Total</th>
-            <th class="p-3 border-b">Payment</th>
-            <th class="p-3 border-b text-center">Actions</th>
+            <th class="p-3 border-b">{{ i18n.t('sale_id') }}</th>
+            <th class="p-3 border-b">{{ i18n.t('date') }}</th>
+            <th class="p-3 border-b">{{ i18n.t('customer') }}</th>
+            <th class="p-3 border-b text-right">{{ i18n.t('amount') }}</th>
+            <th class="p-3 border-b">{{ i18n.t('payment_method') }}</th>
+            <th class="p-3 border-b text-center">{{ i18n.t('actions') }}</th>
           </tr>
         </thead>
         <tbody class="text-gray-700 text-sm">
@@ -568,60 +571,61 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-5 relative">
         <button @click="checkoutModal = false"
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl">✕</button>
-        <h2 class="text-xl font-bold mb-4 text-gray-800">{{ editingOrderId ? 'Update Sale' : 'Checkout' }}</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">{{ editingOrderId ? i18n.t('update_sale') :
+          i18n.t('checkout') }}</h2>
 
         <div class="space-y-3">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Customer Name</label>
+            <label class="block text-sm font-medium text-gray-700">{{ i18n.t('customer_name') }}</label>
             <input v-model="form.customer_name" type="text"
               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Phone</label>
+            <label class="block text-sm font-medium text-gray-700">{{ i18n.t('phone_number') }}</label>
             <input v-model="form.customer_phone" type="text"
               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Payment Method</label>
+            <label class="block text-sm font-medium text-gray-700">{{ i18n.t('payment_method') }}</label>
             <select v-model="form.payment_method"
               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm">
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="mobile">Mobile Banking</option>
+              <option value="cash">{{ i18n.t('cash') }}</option>
+              <option value="card">{{ i18n.t('bank') }}</option>
+              <option value="mobile">{{ i18n.t('mobile_banking') }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Delivery Charge</label>
+            <label class="block text-sm font-medium text-gray-700">{{ i18n.t('delivery_charge') }}</label>
             <input v-model.number="form.delivery_charge" type="number"
               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
           </div>
 
           <div class="pt-3 border-t space-y-1 text-sm">
             <div class="flex justify-between text-gray-600">
-              <span>Subtotal</span>
+              <span>{{ i18n.t('subtotal') }}</span>
               <span>{{ currencySymbol }}{{ subtotal.toFixed(2) }}</span>
             </div>
             <div v-if="autoDiscount > 0" class="flex justify-between text-orange-600">
-              <span>Price Discount</span>
+              <span>{{ i18n.t('price_discount') }}</span>
               <span>-{{ currencySymbol }}{{ autoDiscount.toFixed(2) }}</span>
             </div>
             <div v-if="form.delivery_charge > 0" class="flex justify-between text-gray-600">
-              <span>Delivery</span>
+              <span>{{ i18n.t('delivery_charge') }}</span>
               <span>+{{ currencySymbol }}{{ form.delivery_charge.toFixed(2) }}</span>
             </div>
             <div class="flex justify-between items-center text-xl font-bold text-gray-800 pt-2 border-t">
-              <span>Grand Total</span>
+              <span>{{ i18n.t('total') }}</span>
               <span>{{ currencySymbol }}{{ grandTotal.toFixed(2) }}</span>
             </div>
           </div>
         </div>
 
         <div class="mt-5 flex justify-end space-x-3">
-          <button @click="checkoutModal = false"
-            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+          <button @click="checkoutModal = false" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">{{
+            i18n.t('cancel') }}</button>
           <button @click="processOrder"
             class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm">
-            {{ editingOrderId ? 'Confirm Update' : 'Confirm Payment' }}
+            {{ editingOrderId ? i18n.t('update_sale') : i18n.t('process_sale') }}
           </button>
         </div>
       </div>
@@ -633,14 +637,15 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-5 relative max-h-[90vh] flex flex-col">
         <button @click="showDetailsModal = false"
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl">✕</button>
-        <h2 class="text-xl font-bold mb-1 text-gray-800">Sale Details</h2>
-        <div class="text-xs text-gray-500 mb-4">Sale #{{ selectedOrder.order_id }} | {{ selectedOrder.order_date }}
+        <h2 class="text-xl font-bold mb-1 text-gray-800">{{ i18n.t('sale_details') }}</h2>
+        <div class="text-xs text-gray-500 mb-4">{{ i18n.t('sale_id') }} #{{ selectedOrder.order_id }} | {{
+          selectedOrder.order_date }}
         </div>
 
         <div class="grid grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-lg text-sm">
           <div>
-            <span class="block text-xs text-gray-500 uppercase">Customer</span>
-            <span class="font-medium text-gray-800">{{ selectedOrder.customer_name || 'Guest' }}</span>
+            <span class="block text-xs text-gray-500 uppercase">{{ i18n.t('customer') }}</span>
+            <span class="font-medium text-gray-800">{{ selectedOrder.customer_name || i18n.t('guest') }}</span>
             <div class="text-xs text-gray-600">{{ selectedOrder.customer_phone }}</div>
           </div>
           <div class="text-right">
@@ -653,10 +658,10 @@ onMounted(() => {
           <table class="w-full text-left text-sm border-collapse min-w-[400px]">
             <thead class="bg-gray-100 text-gray-600">
               <tr>
-                <th class="p-2 border-b text-xs">Product</th>
+                <th class="p-2 border-b text-xs">{{ i18n.t('products') }}</th>
                 <th class="p-2 border-b text-right text-xs">Qty</th>
                 <th class="p-2 border-b text-right text-xs">Price</th>
-                <th class="p-2 border-b text-right text-xs">Subtotal</th>
+                <th class="p-2 border-b text-right text-xs">{{ i18n.t('subtotal') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -672,20 +677,21 @@ onMounted(() => {
 
         <div class="border-t mt-3 pt-3 space-y-1 text-sm">
           <div class="flex justify-between py-0.5">
-            <span class="text-gray-600">Subtotal</span>
+            <span class="text-gray-600">{{ i18n.t('subtotal') }}</span>
             <span class="font-medium">{{ currencySymbol }}{{ selectedOrder.subtotal.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between py-0.5" v-if="selectedOrder.discount > 0">
-            <span class="text-gray-600">Discount</span>
+            <span class="text-gray-600">{{ i18n.t('discount') }}</span>
             <span class="text-red-500">-{{ currencySymbol }}{{ selectedOrder.discount.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between py-0.5" v-if="selectedOrder.delivery_charge > 0">
-            <span class="text-gray-600">Delivery</span>
+            <span class="text-gray-600">{{ i18n.t('delivery_charge') }}</span>
             <span class="font-medium">{{ currencySymbol }}{{ selectedOrder.delivery_charge.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between items-end mt-1 pt-2 border-t border-dashed">
-            <div class="text-xs text-gray-500 uppercase">Grand Total</div>
-            <div class="text-2xl font-bold text-gray-800">{{ currencySymbol }}{{ selectedOrder.grand_total.toFixed(2) }}
+            <div class="text-xs text-gray-500 uppercase">{{ i18n.t('total') }}</div>
+            <div class="text-2xl font-bold text-gray-800">{{ currencySymbol }}{{ selectedOrder.grand_total.toFixed(2)
+              }}
             </div>
           </div>
         </div>

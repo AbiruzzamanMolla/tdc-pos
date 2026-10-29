@@ -39,7 +39,12 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
             product_link TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            is_deleted INTEGER DEFAULT 0
+            is_deleted INTEGER DEFAULT 0,
+            website_product_id INTEGER,
+            website_synced_at DATETIME,
+            website_sync_status TEXT DEFAULT 'unsynced',
+            website_sync_error TEXT,
+            website_url TEXT
         );
 
         CREATE TABLE IF NOT EXISTS product_images (
@@ -179,6 +184,21 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection> {
         }
         if !current_columns.contains("profit_percentage") {
             conn.execute("ALTER TABLE products ADD COLUMN profit_percentage REAL DEFAULT 0", [])?;
+        }
+        if !current_columns.contains("website_product_id") {
+            conn.execute("ALTER TABLE products ADD COLUMN website_product_id INTEGER", [])?;
+        }
+        if !current_columns.contains("website_synced_at") {
+            conn.execute("ALTER TABLE products ADD COLUMN website_synced_at DATETIME", [])?;
+        }
+        if !current_columns.contains("website_sync_status") {
+            conn.execute("ALTER TABLE products ADD COLUMN website_sync_status TEXT DEFAULT 'unsynced'", [])?;
+        }
+        if !current_columns.contains("website_sync_error") {
+            conn.execute("ALTER TABLE products ADD COLUMN website_sync_error TEXT", [])?;
+        }
+        if !current_columns.contains("website_url") {
+            conn.execute("ALTER TABLE products ADD COLUMN website_url TEXT", [])?;
         }
     }
 

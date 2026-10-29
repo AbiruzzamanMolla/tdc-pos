@@ -27,6 +27,26 @@ async function loadStockHistory() {
     }
 }
 
+const syncingWeb = ref(false);
+
+async function syncToWebsite() {
+    if (!props.product?.id) return;
+    syncingWeb.value = true;
+    try {
+        const res = await invoke('sync_product_to_website', { productId: props.product.id });
+        props.product.website_sync_status = 'synced';
+        props.product.website_sync_error = null;
+        if (res.website_url) props.product.website_url = res.website_url;
+        alert(`Product "${props.product.product_name}" synced to website successfully!`);
+    } catch (err) {
+        props.product.website_sync_status = 'error';
+        props.product.website_sync_error = String(err);
+        alert('Sync error: ' + err);
+    } finally {
+        syncingWeb.value = false;
+    }
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleString();
@@ -165,6 +185,31 @@ watch(() => props.show, (newVal) => {
                                 <span class="text-gray-500">Brand</span>
                                 <span class="font-medium text-gray-800">{{ product.brand || 'No Brand' }}</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 flex justify-between items-center">
+                            <span>Storefront Sync</span>
+                            <span v-if="product.website_sync_status === 'synced'" class="text-green-600 font-bold text-[10px]">● Synced</span>
+                            <span v-else-if="product.website_sync_status === 'error'" class="text-red-500 font-bold text-[10px]">● Error</span>
+                            <span v-else class="text-gray-400 font-normal text-[10px]">● Not Synced</span>
+                        </h4>
+                        <div class="flex flex-col gap-2">
+                            <a v-if="product.website_url" :href="product.website_url" target="_blank"
+                                class="flex items-center justify-between text-xs text-purple-700 font-medium bg-purple-50 px-3 py-2 rounded-xl border border-purple-100 hover:bg-purple-100 transition-colors">
+                                <span>🌐 View on Storefront</span>
+                                <span>↗</span>
+                            </a>
+                            <button @click="syncToWebsite" :disabled="syncingWeb"
+                                class="flex items-center justify-center gap-2 text-xs text-white font-bold bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-xl transition-colors disabled:opacity-50 shadow-sm">
+                                <span v-if="syncingWeb" class="animate-spin">⏳</span>
+                                <span v-else>⬆</span>
+                                {{ syncingWeb ? 'Pushing to Storefront...' : (product.website_sync_status === 'synced' ? 'Re-sync to Storefront' : 'Push to Storefront') }}
+                            </button>
+                            <p v-if="product.website_sync_error" class="text-[11px] text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                                ⚠️ {{ product.website_sync_error }}
+                            </p>
                         </div>
                     </div>
 

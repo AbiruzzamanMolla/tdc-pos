@@ -22,6 +22,10 @@ TDC-POS is a modern, offline-first Point of Sale (POS) desktop application built
   - Sales history with profit analysis.
   - Inventory valuation reports.
   - PDF export functionality.
+- **Storefront Integration**:
+  - Direct REST API integration with `deshichakma.com`.
+  - Push products and up to 20 images per product with 1-click single or batch sync.
+  - Automatic rate-limit protection, slug normalization, and discount price mapping.
 - **Tools**:
   - **Floating Calculator**: Persistent calculator accessible from any screen.
   - **AI Assistant**: Conversational AI powered by Google Gemini (requires API key).

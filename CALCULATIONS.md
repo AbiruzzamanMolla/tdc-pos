@@ -24,6 +24,14 @@ A suggested selling price based on a user-defined profit margin.
 **Formula:**
 $$Expected\ Selling\ Price = Buying\ Price \times \left(1 + \frac{Profit\ \%}{100}\right)$$
 
+### 1.4 Storefront Price & Discount Mapping
+
+When syncing products to the external website storefront (`deshichakma.com`), prices are mapped according to discount status:
+* If $Original\ Price > Default\ Selling\ Price > 0$:
+  $$Price = Original\ Price,\quad Special\ Price = Default\ Selling\ Price$$
+* Otherwise:
+  $$Price = Default\ Selling\ Price,\quad Special\ Price = \text{null (omitted)}$$
+
 ---
 
 ## 2. Procurement / Buying Module (`Buying.vue`)

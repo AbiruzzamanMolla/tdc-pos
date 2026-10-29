@@ -1,6 +1,6 @@
 use crate::models::{Product, Purchase, PurchaseItem, Order, OrderItem, DashboardStats, SalesReportItem, InventoryReportItem, User, Expense};
 use crate::db::Database;
-use tauri::{State, AppHandle, Manager};
+use tauri::{State, AppHandle, Manager, Emitter};
 use rusqlite::params;
 use std::collections::HashMap;
 
@@ -13,7 +13,8 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
         SELECT p.id, p.product_name, p.product_code, p.category, p.brand, p.buying_price, p.default_selling_price, 
                p.stock_quantity, p.unit, p.tax_percentage, p.original_price, p.profit_percentage, p.facebook_link, p.product_link,
                p.created_at, p.updated_at, p.is_deleted,
-               (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as image_path
+               (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as image_path,
+               p.website_product_id, p.website_synced_at, p.website_sync_status, p.website_sync_error, p.website_url
         FROM products p
         WHERE p.is_deleted = 0
     ").map_err(|e| e.to_string())?;
@@ -41,6 +42,11 @@ pub fn get_products(db: State<Database>) -> Result<Vec<Product>, String> {
             updated_at: row.get(15)?,
             is_deleted: row.get(16)?,
             images,
+            website_product_id: row.get(18)?,
+            website_synced_at: row.get(19)?,
+            website_sync_status: row.get(20)?,
+            website_sync_error: row.get(21)?,
+            website_url: row.get(22)?,
         })
     }).map_err(|e| e.to_string())?;
     
@@ -1468,4 +1474,421 @@ pub fn cleanup_database(
 
     tx.commit().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+
+// -------------------------------------------------------------
+// Website Storefront Sync (https://deshichakma.com)
+// -------------------------------------------------------------
+
+fn normalize_sku(raw: Option<&str>, fallback_id: i64) -> String {
+    let raw = raw.unwrap_or("").trim();
+    if raw.is_empty() {
+        return format!("POS-{}", fallback_id);
+    }
+    
+    let mut normalized = String::new();
+    let mut last_was_dash = false;
+    
+    for ch in raw.chars() {
+        if ch.is_alphanumeric() {
+            normalized.push(ch);
+            last_was_dash = false;
+        } else if !last_was_dash {
+            normalized.push('-');
+            last_was_dash = true;
+        }
+    }
+    
+    let trimmed = normalized.trim_matches('-');
+    if trimmed.is_empty() {
+        format!("POS-{}", fallback_id)
+    } else {
+        trimmed.to_string()
+    }
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct SyncProgressEvent {
+    pub current: usize,
+    pub total: usize,
+    pub product_id: i64,
+    pub product_name: String,
+    pub status: String,
+    pub message: String,
+    pub website_url: Option<String>,
+}
+
+#[tauri::command]
+pub async fn test_website_connection(
+    api_url: Option<String>,
+    api_key: Option<String>,
+    db: State<'_, Database>,
+) -> Result<String, String> {
+    let (target_url, target_key) = {
+        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare("SELECT key, value FROM settings WHERE key IN ('website_api_url', 'website_api_key')").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?;
+        let mut map = HashMap::new();
+        for r in rows {
+            if let Ok((k, v)) = r {
+                map.insert(k, v);
+            }
+        }
+        let url = api_url.filter(|s| !s.trim().is_empty()).unwrap_or_else(|| {
+            map.get("website_api_url").cloned().unwrap_or_else(|| "https://deshichakma.com/api/pos/v1/products".to_string())
+        });
+        let key = api_key.filter(|s| !s.trim().is_empty()).unwrap_or_else(|| {
+            map.get("website_api_key").cloned().unwrap_or_default()
+        });
+        (url, key)
+    };
+
+    if target_key.trim().is_empty() {
+        return Err("API Key (X-POS-Key) is not set. Please enter your secret key in Settings.".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client
+        .post(&target_url)
+        .header("Accept", "application/json")
+        .header("X-POS-Key", &target_key)
+        .send()
+        .await
+        .map_err(|e| format!("Connection failed: {}", e))?;
+
+    let status = res.status().as_u16();
+    if status == 401 {
+        return Err("Authentication failed (401): Invalid API Key.".to_string());
+    } else if status == 403 {
+        return Err("Access forbidden (403): Caller IP not allowed by server.".to_string());
+    } else if status == 503 {
+        return Err("Service unavailable (503): Product API is not configured on the website.".to_string());
+    } else if status == 422 || status == 400 || status == 200 || status == 201 || status == 409 {
+        return Ok("Connection successful! Server reached and authenticated.".to_string());
+    } else {
+        return Err(format!("Unexpected server response: HTTP {}", status));
+    }
+}
+
+async fn perform_sync_product(
+    product_id: i64,
+    app_handle: &AppHandle,
+    db: &State<'_, Database>,
+) -> Result<serde_json::Value, String> {
+    let (product, image_paths, api_url, api_key, default_category, default_status) = {
+        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+        
+        let mut p_stmt = conn.prepare("
+            SELECT id, product_name, product_code, category, brand, buying_price, default_selling_price, 
+                   stock_quantity, unit, tax_percentage, original_price, profit_percentage, facebook_link, product_link,
+                   created_at, updated_at, is_deleted,
+                   website_product_id, website_synced_at, website_sync_status, website_sync_error, website_url
+            FROM products WHERE id = ?1
+        ").map_err(|e| e.to_string())?;
+        
+        let product = p_stmt.query_row(params![product_id], |row| {
+            Ok(Product {
+                id: Some(row.get(0)?),
+                product_name: row.get(1)?,
+                product_code: row.get(2)?,
+                category: row.get(3)?,
+                brand: row.get(4)?,
+                buying_price: row.get(5)?,
+                default_selling_price: row.get(6)?,
+                stock_quantity: row.get(7)?,
+                unit: row.get(8)?,
+                tax_percentage: row.get(9)?,
+                original_price: row.get(10)?,
+                profit_percentage: row.get(11)?,
+                facebook_link: row.get(12)?,
+                product_link: row.get(13)?,
+                created_at: row.get(14)?,
+                updated_at: row.get(15)?,
+                is_deleted: row.get(16)?,
+                images: None,
+                website_product_id: row.get(17)?,
+                website_synced_at: row.get(18)?,
+                website_sync_status: row.get(19)?,
+                website_sync_error: row.get(20)?,
+                website_url: row.get(21)?,
+            })
+        }).map_err(|e| format!("Product not found: {}", e))?;
+
+        let mut img_stmt = conn.prepare("SELECT image_path FROM product_images WHERE product_id = ?1 ORDER BY id ASC LIMIT 20").map_err(|e| e.to_string())?;
+        let img_iter = img_stmt.query_map(params![product_id], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?;
+        let mut paths = Vec::new();
+        for img in img_iter {
+            if let Ok(p) = img {
+                paths.push(p);
+            }
+        }
+
+        let mut s_stmt = conn.prepare("SELECT key, value FROM settings").map_err(|e| e.to_string())?;
+        let s_iter = s_stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?;
+        let mut settings_map = HashMap::new();
+        for r in s_iter {
+            if let Ok((k, v)) = r {
+                settings_map.insert(k, v);
+            }
+        }
+
+        let url = settings_map.get("website_api_url").cloned().unwrap_or_else(|| "https://deshichakma.com/api/pos/v1/products".to_string());
+        let key = settings_map.get("website_api_key").cloned().unwrap_or_default();
+        let cat = settings_map.get("website_default_category").cloned().unwrap_or_else(|| "Root".to_string());
+        let st = settings_map.get("website_default_status").cloned().unwrap_or_else(|| "1".to_string());
+
+        (product, paths, url, key, cat, st)
+    };
+
+    if api_key.trim().is_empty() {
+        return Err("API Key (X-POS-Key) is missing. Please configure it in Settings first.".to_string());
+    }
+
+    let sku = normalize_sku(product.product_code.as_deref(), product_id);
+    let name = if product.product_name.trim().is_empty() {
+        format!("Product #{}", product_id)
+    } else {
+        product.product_name.clone()
+    };
+
+    let (price_str, special_price_str) = if product.original_price > product.default_selling_price && product.default_selling_price > 0.0 {
+        (
+            format!("{:.2}", product.original_price),
+            Some(format!("{:.2}", product.default_selling_price))
+        )
+    } else {
+        (
+            format!("{:.2}", product.default_selling_price.max(0.0)),
+            None
+        )
+    };
+
+    let stock_qty = (product.stock_quantity.floor().max(0.0) as i64).to_string();
+    let weight_str = "0.5".to_string();
+    
+    // Category: default to Root per user preference
+    let category_name = if default_category.trim().is_empty() { "Root".to_string() } else { default_category };
+    
+    let mut form = reqwest::multipart::Form::new()
+        .text("sku", sku.clone())
+        .text("name", name)
+        .text("price", price_str)
+        .text("stock_qty", stock_qty)
+        .text("manage_stock", "1")
+        .text("weight", weight_str)
+        .text("status", default_status)
+        .text("category", category_name)
+        .text("pos_id", product_id.to_string());
+
+    if let Some(sp) = special_price_str {
+        form = form.text("special_price", sp);
+    }
+
+    if product.buying_price > 0.0 {
+        form = form.text("cost", format!("{:.2}", product.buying_price));
+    }
+
+    if let Some(brand) = product.brand.filter(|b| !b.trim().is_empty()) {
+        form = form.text("brand", brand);
+    }
+
+    // Attach up to 20 images
+    let app_dir = app_handle.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    for image_path_str in image_paths.into_iter().take(20) {
+        let mut file_path = if std::path::Path::new(&image_path_str).is_absolute() {
+            std::path::PathBuf::from(&image_path_str)
+        } else {
+            app_dir.join(&image_path_str)
+        };
+
+        if !file_path.exists() {
+            let file_name = image_path_str.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(&image_path_str);
+            let fallback = app_dir.join("images").join(file_name);
+            if fallback.exists() {
+                file_path = fallback;
+            }
+        }
+
+        if file_path.exists() {
+            if let Ok(bytes) = std::fs::read(&file_path) {
+                let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("image.jpg").to_string();
+                let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("jpg").to_lowercase();
+                let mime = match ext.as_str() {
+                    "png" => "image/png",
+                    "webp" => "image/webp",
+                    _ => "image/jpeg",
+                };
+                let part = reqwest::multipart::Part::bytes(bytes)
+                    .file_name(filename)
+                    .mime_str(mime)
+                    .unwrap_or_else(|_| reqwest::multipart::Part::bytes(vec![]));
+                form = form.part("images[]", part);
+            }
+        }
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(45))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client
+        .post(&api_url)
+        .header("Accept", "application/json")
+        .header("X-POS-Key", &api_key)
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| format!("HTTP request error: {}", e))?;
+
+    let status = res.status();
+    let status_code = status.as_u16();
+    let body_text = res.text().await.unwrap_or_default();
+    let json_res: serde_json::Value = serde_json::from_str(&body_text).unwrap_or(serde_json::json!({
+        "raw_response": body_text
+    }));
+
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    if status_code == 201 {
+        let web_id = json_res["data"]["id"].as_i64();
+        let web_url = json_res["data"]["url"].as_str().map(|s| s.to_string());
+        
+        conn.execute(
+            "UPDATE products SET website_product_id = ?1, website_url = ?2, website_sync_status = 'synced', website_synced_at = CURRENT_TIMESTAMP, website_sync_error = NULL WHERE id = ?3",
+            params![web_id, web_url, product_id]
+        ).map_err(|e| e.to_string())?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "status": "created",
+            "website_id": web_id,
+            "website_url": web_url,
+            "data": json_res
+        }))
+    } else if status_code == 409 {
+        let web_id = json_res["data"]["id"].as_i64();
+        conn.execute(
+            "UPDATE products SET website_product_id = COALESCE(?1, website_product_id), website_sync_status = 'synced', website_synced_at = CURRENT_TIMESTAMP, website_sync_error = NULL WHERE id = ?2",
+            params![web_id, product_id]
+        ).map_err(|e| e.to_string())?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "status": "exists",
+            "message": "Product already exists on website",
+            "website_id": web_id,
+            "data": json_res
+        }))
+    } else if status_code == 422 {
+        let err_msg = if let Some(errors) = json_res.get("errors") {
+            errors.to_string()
+        } else {
+            json_res.get("message").and_then(|m| m.as_str()).unwrap_or("Validation error").to_string()
+        };
+
+        conn.execute(
+            "UPDATE products SET website_sync_status = 'error', website_sync_error = ?1 WHERE id = ?2",
+            params![err_msg, product_id]
+        ).map_err(|e| e.to_string())?;
+
+        Err(format!("Validation failed (422): {}", err_msg))
+    } else {
+        let err_msg = format!("Server error HTTP {}: {}", status_code, json_res.get("message").and_then(|m| m.as_str()).unwrap_or(&body_text));
+        conn.execute(
+            "UPDATE products SET website_sync_status = 'error', website_sync_error = ?1 WHERE id = ?2",
+            params![err_msg, product_id]
+        ).map_err(|e| e.to_string())?;
+
+        Err(err_msg)
+    }
+}
+
+#[tauri::command]
+pub async fn sync_product_to_website(
+    product_id: i64,
+    app_handle: AppHandle,
+    db: State<'_, Database>,
+) -> Result<serde_json::Value, String> {
+    perform_sync_product(product_id, &app_handle, &db).await
+}
+
+#[tauri::command]
+pub async fn sync_all_products_to_website(
+    app_handle: AppHandle,
+    db: State<'_, Database>,
+) -> Result<serde_json::Value, String> {
+    let product_ids: Vec<(i64, String)> = {
+        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare("SELECT id, product_name FROM products WHERE is_deleted = 0 AND (website_sync_status IS NULL OR website_sync_status != 'synced') ORDER BY id ASC").map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?))).map_err(|e| e.to_string())?;
+        let mut list = Vec::new();
+        for r in rows {
+            if let Ok(item) = r {
+                list.push(item);
+            }
+        }
+        list
+    };
+
+    let total = product_ids.len();
+    let mut success_count = 0;
+    let mut fail_count = 0;
+
+    for (index, (pid, pname)) in product_ids.into_iter().enumerate() {
+        let _ = app_handle.emit("website-sync-progress", SyncProgressEvent {
+            current: index + 1,
+            total,
+            product_id: pid,
+            product_name: pname.clone(),
+            status: "processing".to_string(),
+            message: format!("Syncing {} of {}: {}", index + 1, total, pname),
+            website_url: None,
+        });
+
+        match perform_sync_product(pid, &app_handle, &db).await {
+            Ok(val) => {
+                success_count += 1;
+                let status_type = val.get("status").and_then(|s| s.as_str()).unwrap_or("synced");
+                let web_url = val.get("website_url").and_then(|u| u.as_str()).map(|s| s.to_string());
+                let _ = app_handle.emit("website-sync-progress", SyncProgressEvent {
+                    current: index + 1,
+                    total,
+                    product_id: pid,
+                    product_name: pname,
+                    status: status_type.to_string(),
+                    message: if status_type == "exists" { "Already existed on website".to_string() } else { "Successfully created".to_string() },
+                    website_url: web_url,
+                });
+            },
+            Err(e) => {
+                fail_count += 1;
+                let _ = app_handle.emit("website-sync-progress", SyncProgressEvent {
+                    current: index + 1,
+                    total,
+                    product_id: pid,
+                    product_name: pname,
+                    status: "error".to_string(),
+                    message: e,
+                    website_url: None,
+                });
+            }
+        }
+
+        // Pacing: wait 1 second between products to respect rate limits (60 req/min)
+        if index + 1 < total {
+            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        }
+    }
+
+    Ok(serde_json::json!({
+        "total": total,
+        "success": success_count,
+        "failed": fail_count
+    }))
 }

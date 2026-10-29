@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.23.0] - 2026-10-29
+
+### Added
+
+- **Storefront Integration (DeshiChakma.com)**: Direct REST API v1 integration with the live e-commerce storefront at `https://deshichakma.com/api/pos/v1/products`.
+- **Background Sync Engine (Rust)**: Native `reqwest` multipart/form-data streaming for syncing product details and uploading up to 20 local images per product.
+- **Batch Sync with Rate-Limit Pacing**: Automated 1-second pacing interval between requests to strictly respect the 60 requests/minute server limit.
+- **Storefront Tracking Database Migration**: Added `website_product_id`, `website_synced_at`, `website_sync_status`, `website_sync_error`, and `website_url` columns to the SQLite `products` table.
+- **Storefront Settings Management**: Added configuration panel for Storefront API URL, secret key (`X-POS-Key`) with show/hide toggle, default fallback category (`Root`), default status (Live vs Staged), and a live connectivity diagnostic tester.
+- **Interactive Products Sync UI**: Added a "Sync Storefront" header button with unsynced count badge, live progress modal with real-time logs, per-card status badges (🟢 Synced with `View Web ↗` link, 🔴 Sync Error with tooltip, ⚪ Not Synced), and 1-click sync buttons on product cards and in the details modal.
+
+### Changed
+
+- **SKU Normalization**: Automatic formatting of product codes to valid URL-safe slugs (`^[\p{L}\p{M}\p{N}]+(?:-[\p{L}\p{M}\p{N}]+)*$`) with POS ID fallback.
+- **Pricing Model Mapping**: Intelligent mapping of retail and promotional pricing according to storefront rules (`original_price` and `default_selling_price` mapped to `price` and `special_price`).
+
 ## [0.22.2] - 2026-03-15
 
 ### Fixed

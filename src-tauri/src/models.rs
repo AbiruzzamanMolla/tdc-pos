@@ -21,6 +21,11 @@ pub struct Product {
     pub updated_at: Option<String>,
     pub is_deleted: i32,
     pub images: Option<Vec<String>>, // Not a DB column, populated manually
+    pub website_product_id: Option<i64>,
+    pub website_synced_at: Option<String>,
+    pub website_sync_status: Option<String>,
+    pub website_sync_error: Option<String>,
+    pub website_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

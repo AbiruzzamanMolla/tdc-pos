@@ -340,7 +340,7 @@ Use:
 
 - Role-based access
 - **Weighted Average Inventory Costing**: Precise cost tracking with Landed Cost (Extra Charges) support in procurement. (Implemented v0.11.0)
-- Cloud sync
+- Cloud sync / Storefront API sync (Implemented v0.23.0)
 - Barcode scanner support
 - Mobile companion app
 

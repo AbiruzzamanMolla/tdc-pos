@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { open, confirm } from '@tauri-apps/plugin-dialog';
 import ProductDetailsModal from '../components/ProductDetailsModal.vue';
 import { logActivity } from '../utils/activityLogger';
@@ -58,6 +59,103 @@ const filteredProducts = computed(() => {
     (p.product_code && p.product_code.toLowerCase().includes(query))
   );
 });
+
+// --- Storefront Sync State & Handlers ---
+const isSyncing = ref(false);
+const syncModalOpen = ref(false);
+const syncingProductIds = ref(new Set());
+const syncProgress = ref({ current: 0, total: 0, message: '' });
+const syncLogs = ref([]);
+
+const unsyncedCount = computed(() => {
+  return products.value.filter(p => !p.website_sync_status || p.website_sync_status !== 'synced').length;
+});
+
+let unlistenProgress = null;
+
+onMounted(async () => {
+  try {
+    unlistenProgress = await listen('website-sync-progress', (event) => {
+      const payload = event.payload;
+      syncProgress.value = {
+        current: payload.current,
+        total: payload.total,
+        message: payload.message
+      };
+      syncLogs.value.unshift({
+        status: payload.status,
+        message: payload.message,
+        time: new Date().toLocaleTimeString()
+      });
+      // Update local product status dynamically
+      const targetProd = products.value.find(p => p.id === payload.product_id);
+      if (targetProd) {
+        if (payload.status === 'created' || payload.status === 'exists') {
+          targetProd.website_sync_status = 'synced';
+          targetProd.website_sync_error = null;
+          if (payload.website_url) targetProd.website_url = payload.website_url;
+        } else if (payload.status === 'error') {
+          targetProd.website_sync_status = 'error';
+          targetProd.website_sync_error = payload.message;
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Failed to attach sync listener:', err);
+  }
+});
+
+onBeforeRouteLeave(() => {
+  if (unlistenProgress) {
+    unlistenProgress();
+  }
+});
+
+async function startSyncAllModal() {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot sync products.");
+    return;
+  }
+  syncModalOpen.value = true;
+  isSyncing.value = true;
+  syncProgress.value = { current: 0, total: unsyncedCount.value, message: 'Starting sync...' };
+  syncLogs.value = [];
+
+  try {
+    const res = await invoke('sync_all_products_to_website');
+    await logActivity('SYNC', 'Storefront', null, `Storefront batch sync completed: ${res.success} succeeded, ${res.failed} failed`);
+    await loadProducts();
+  } catch (err) {
+    console.error('Batch sync failed:', err);
+    alert('Storefront sync error: ' + err);
+  } finally {
+    isSyncing.value = false;
+  }
+}
+
+async function syncSingleProduct(product) {
+  if (auth.isDemo) {
+    alert("View-only account: Cannot sync products.");
+    return;
+  }
+  syncingProductIds.value.add(product.id);
+  try {
+    const res = await invoke('sync_product_to_website', { productId: product.id });
+    product.website_sync_status = 'synced';
+    product.website_sync_error = null;
+    if (res.website_url) product.website_url = res.website_url;
+    await logActivity('SYNC', 'Storefront', product.id, `Synced ${product.product_name} to storefront`);
+    alert(`Product "${product.product_name}" synced to website successfully!`);
+  } catch (err) {
+    console.error('Single product sync failed:', err);
+    product.website_sync_status = 'error';
+    product.website_sync_error = String(err);
+    alert('Failed to sync to storefront: ' + err);
+  } finally {
+    syncingProductIds.value.delete(product.id);
+  }
+}
+// ----------------------------------------
 
 const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage) || 1);
 const paginatedProducts = computed(() => {
@@ -273,10 +371,22 @@ onMounted(() => {
   <div class="flex flex-col space-y-4">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Products</h1>
-      <button v-if="!auth.isDemo" @click="openModal()"
-        class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2">
-        + Add Product
-      </button>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <button v-if="!auth.isDemo" @click="startSyncAllModal" :disabled="isSyncing"
+          class="w-full sm:w-auto justify-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2 disabled:opacity-50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          Sync Storefront
+          <span v-if="unsyncedCount > 0" class="bg-purple-800 text-purple-200 text-xs px-2 py-0.5 rounded-full font-bold">
+            {{ unsyncedCount }}
+          </span>
+        </button>
+        <button v-if="!auth.isDemo" @click="openModal()"
+          class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2">
+          + Add Product
+        </button>
+      </div>
     </div>
 
     <!-- Search -->
@@ -347,6 +457,23 @@ onMounted(() => {
               </div>
             </div>
 
+            <!-- Storefront Sync Status -->
+            <div class="mt-2.5 flex items-center justify-between text-xs pt-2 border-t border-gray-100">
+              <span v-if="product.website_sync_status === 'synced'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Synced
+              </span>
+              <span v-else-if="product.website_sync_status === 'error'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 cursor-help" :title="product.website_sync_error">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Sync Error
+              </span>
+              <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                Not Synced
+              </span>
+
+              <a v-if="product.website_url" :href="product.website_url" target="_blank" class="text-blue-600 hover:text-blue-800 text-[11px] font-medium flex items-center gap-0.5">
+                View Web ↗
+              </a>
+            </div>
+
             <!-- Additional Details -->
             <div class="mt-3 grid grid-cols-2 gap-x-2 gap-y-2 text-xs">
               <div class="flex flex-col">
@@ -370,6 +497,15 @@ onMounted(() => {
             <div class="mt-auto pt-4">
               <!-- Actions -->
               <div class="flex gap-2">
+                <button v-if="!auth.isDemo" @click="syncSingleProduct(product)" :disabled="syncingProductIds.has(product.id)"
+                  class="flex-1 flex justify-center items-center gap-1 py-2 px-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-bold transition-colors border border-purple-200 disabled:opacity-50"
+                  :title="product.website_sync_status === 'synced' ? 'Re-sync to Storefront' : 'Sync to Storefront'">
+                  <span v-if="syncingProductIds.has(product.id)" class="animate-spin text-xs">⏳</span>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span class="sr-only sm:not-sr-only text-[11px]">{{ product.website_sync_status === 'synced' ? 'Sync' : 'Push' }}</span>
+                </button>
                 <button @click="openViewModal(product)"
                   class="flex-1 flex justify-center items-center gap-1.5 py-2 px-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg text-xs font-bold transition-colors border border-gray-200"
                   title="View">
@@ -592,5 +728,67 @@ onMounted(() => {
     <!-- View Details Modal Component -->
     <ProductDetailsModal :show="showViewModal" :product="selectedProduct" :currency-symbol="currencySymbol"
       @close="showViewModal = false" />
+    <!-- Storefront Sync Progress Modal -->
+    <div v-if="syncModalOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 relative max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-4 border-b">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl">
+              🌐
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-gray-800">Storefront Product Sync</h2>
+              <p class="text-xs text-gray-500">Syncing products to deshichakma.com</p>
+            </div>
+          </div>
+          <button v-if="!isSyncing" @click="syncModalOpen = false" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        </div>
+
+        <div class="py-6 space-y-4">
+          <!-- Progress Stats -->
+          <div class="flex justify-between items-center text-xs font-bold text-gray-600">
+            <span>{{ isSyncing ? 'Syncing products in progress...' : 'Sync process completed' }}</span>
+            <span class="text-purple-600 font-mono">{{ syncProgress.current }} / {{ syncProgress.total }}</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+            <div class="bg-purple-600 h-full rounded-full transition-all duration-300"
+              :style="{ width: syncProgress.total > 0 ? (syncProgress.current / syncProgress.total * 100) + '%' : '0%' }"></div>
+          </div>
+
+          <!-- Activity Log Box -->
+          <div class="bg-gray-900 text-gray-200 rounded-xl p-4 font-mono text-xs h-60 overflow-y-auto space-y-2">
+            <div v-if="syncLogs.length === 0" class="text-gray-500 italic">
+              Preparing sync queue...
+            </div>
+            <div v-for="(log, idx) in syncLogs" :key="idx" class="flex items-start gap-2">
+              <span v-if="log.status === 'success' || log.status === 'created'" class="text-green-400 font-bold">✓</span>
+              <span v-else-if="log.status === 'exists'" class="text-blue-400 font-bold">ℹ</span>
+              <span v-else-if="log.status === 'error'" class="text-red-400 font-bold">✕</span>
+              <span v-else class="text-yellow-400 font-bold">→</span>
+              <span class="flex-1" :class="{ 'text-red-300': log.status === 'error', 'text-green-300': log.status === 'created' }">
+                {{ log.message }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t flex justify-between items-center">
+          <div class="text-xs text-gray-500">
+            <span v-if="isSyncing" class="flex items-center gap-2">
+              <span class="animate-spin">⏳</span> Rate limit protected (1 req/sec)
+            </span>
+            <span v-else class="text-green-600 font-bold">
+              ✓ Ready
+            </span>
+          </div>
+          <button v-if="!isSyncing" @click="syncModalOpen = false"
+            class="px-5 py-2 bg-gray-800 hover:bg-black text-white text-xs font-bold rounded-lg shadow transition">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

@@ -24,8 +24,32 @@ const settings = reactive({
   store_email: "",
   currency_symbol: "৳",
   tax_rate: "0",
-  google_ai_key: ""
+  google_ai_key: "",
+  website_api_url: "https://deshichakma.com/api/pos/v1/products",
+  website_api_key: "",
+  website_default_category: "Root",
+  website_default_status: "1"
 });
+
+const testingConn = ref(false);
+const testResult = ref({ success: false, message: "" });
+const showApiKey = ref(false);
+
+async function testWebsiteConn() {
+  testingConn.value = true;
+  testResult.value = { success: false, message: "" };
+  try {
+    const res = await invoke('test_website_connection', {
+      apiUrl: settings.website_api_url,
+      apiKey: settings.website_api_key
+    });
+    testResult.value = { success: true, message: res };
+  } catch (err) {
+    testResult.value = { success: false, message: String(err) };
+  } finally {
+    testingConn.value = false;
+  }
+}
 
 async function loadSettings() {
   try {
@@ -176,6 +200,80 @@ onMounted(() => {
                 Studio</a>.
             </p>
           </div>
+
+        <!-- Website Integration Section -->
+        <div class="border-t pt-6 mb-6">
+          <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-4 sm:mb-6 border-b pb-2 flex items-center justify-between">
+            <span class="flex items-center gap-2">🌐 Storefront Integration (deshichakma.com)</span>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">REST API v1</span>
+          </h2>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Storefront Product API URL</label>
+              <input v-model="settings.website_api_url" type="text"
+                placeholder="https://deshichakma.com/api/pos/v1/products"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:outline-none text-sm font-mono">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Storefront API Secret Key (<code class="text-xs bg-gray-100 px-1 py-0.5 rounded">X-POS-Key</code>)
+              </label>
+              <div class="relative flex items-center">
+                <input v-model="settings.website_api_key" :type="showApiKey ? 'text' : 'password'"
+                  placeholder="Paste the secret X-POS-Key provided for this integration"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-12 focus:ring-blue-500 focus:outline-none text-sm font-mono">
+                <button type="button" @click="showApiKey = !showApiKey"
+                  class="absolute right-3 text-xs text-gray-500 hover:text-gray-700 font-medium">
+                  {{ showApiKey ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                Static authorization key for <code>deshichakma.com</code>. Never share or log this key.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Default Fallback Category</label>
+              <input v-model="settings.website_default_category" type="text"
+                placeholder="Root"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:outline-none text-sm">
+              <p class="text-xs text-gray-500 mt-1">
+                Default category on website (e.g. <code>Root</code>). Products will default to this category.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Default Storefront Status</label>
+              <select v-model="settings.website_default_status"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
+                <option value="1">Live / Visible immediately (status = 1)</option>
+                <option value="0">Staged / Hidden (status = 0)</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">
+                Choose whether synced products appear live on the website immediately.
+              </p>
+            </div>
+          </div>
+
+          <!-- Test Connection Button & Result -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <button type="button" @click="testWebsiteConn" :disabled="testingConn || !settings.website_api_key"
+              class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold rounded-lg border border-gray-300 shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+              <span v-if="testingConn" class="animate-spin">⏳</span>
+              <span v-else>🔌</span>
+              {{ testingConn ? 'Testing Connection...' : 'Test Storefront Connection' }}
+            </button>
+            <div v-if="testResult.message" :class="testResult.success ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'"
+              class="text-xs font-medium px-3 py-2 rounded-lg border flex-1">
+              {{ testResult.message }}
+            </div>
+            <span v-else class="text-xs text-gray-500">
+              Verify your API URL and X-POS-Key without modifying any store products.
+            </span>
+          </div>
+        </div>
 
           <!-- Save Button Section -->
           <div class="flex items-center justify-between pt-6 border-t">
